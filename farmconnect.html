@@ -1,0 +1,2399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FarmConnect — Right Machine. Right Time. Right Farm.</title>
+<style>
+:root{
+  --loam:#1F2A1C;
+  --loam-2:#2A3823;
+  --husk:#EFEADA;
+  --husk-2:#E3DCC5;
+  --harvest:#D9A441;
+  --harvest-dark:#B5822F;
+  --furrow:#3F6B3E;
+  --furrow-dark:#2E4F2D;
+  --rust:#A34A28;
+  --ink:#20241C;
+  --ink-soft:#4B5245;
+  --paper:#FBF9F2;
+  --line: rgba(32,36,28,0.14);
+  --ok:#3F6B3E;
+  --warn:#B5822F;
+  --bad:#A34A28;
+  --radius: 10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--husk);
+  color:var(--ink);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+h1,h2,h3,h4,.display{
+  font-family:'Archivo Expanded','Archivo',Impact,sans-serif;
+  font-weight:800;
+  letter-spacing:-0.01em;
+  color:var(--ink);
+  margin:0;
+}
+.mono{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;}
+::selection{background:var(--harvest);color:var(--ink);}
+:focus-visible{outline:3px solid var(--furrow);outline-offset:2px;}
+
+/* ---- layout shell ---- */
+#app{min-height:100vh;display:flex;flex-direction:column;}
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:var(--husk);border-bottom:1px solid var(--line);
+  backdrop-filter:blur(6px);
+}
+.topbar-inner{
+  max-width:1180px;margin:0 auto;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-0.02em;}
+.brand-mark{
+  width:32px;height:32px;border-radius:7px;background:var(--furrow);
+  display:flex;align-items:center;justify-content:center;color:var(--husk);
+  font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:16px;
+  box-shadow:2px 2px 0 var(--loam);
+}
+.nav-links{display:flex;gap:22px;align-items:center;font-size:14px;font-weight:600;color:var(--ink-soft);}
+.nav-links a:hover{color:var(--ink);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.pill-btn{
+  padding:9px 16px;border-radius:100px;border:1.5px solid var(--ink);
+  background:transparent;font-weight:700;font-size:13.5px;color:var(--ink);
+  transition:all .15s ease;
+}
+.pill-btn:hover{background:var(--ink);color:var(--husk);}
+.pill-btn.solid{background:var(--furrow);border-color:var(--furrow);color:var(--husk);}
+.pill-btn.solid:hover{background:var(--furrow-dark);border-color:var(--furrow-dark);}
+.icon-btn{
+  width:38px;height:38px;border-radius:100px;border:1.5px solid var(--line);
+  background:var(--paper);display:flex;align-items:center;justify-content:center;
+  position:relative;font-size:16px;
+}
+.badge-dot{
+  position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;
+  background:var(--rust);border:2px solid var(--husk);
+}
+main{flex:1;}
+
+/* ---- buttons/inputs shared ---- */
+.btn{
+  padding:11px 20px;border-radius:8px;border:none;font-weight:700;font-size:14px;
+  display:inline-flex;align-items:center;gap:8px;transition:transform .1s ease, box-shadow .1s ease;
+}
+.btn-primary{background:var(--furrow);color:var(--husk);box-shadow:3px 3px 0 var(--loam);}
+.btn-primary:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--loam);}
+.btn-primary:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--loam);}
+.btn-dark{background:var(--ink);color:var(--husk);}
+.btn-dark:hover{background:#333d2b;}
+.btn-outline{background:transparent;border:1.5px solid var(--ink);color:var(--ink);}
+.btn-outline:hover{background:var(--ink);color:var(--husk);}
+.btn-ghost{background:transparent;color:var(--ink-soft);}
+.btn-ghost:hover{color:var(--ink);}
+.btn-danger{background:var(--rust);color:var(--husk);}
+.btn-sm{padding:7px 14px;font-size:12.5px;border-radius:6px;}
+.btn-full{width:100%;justify-content:center;}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none !important;box-shadow:none !important;}
+
+input,select,textarea{
+  font-family:inherit;font-size:14px;padding:10px 12px;border-radius:7px;
+  border:1.5px solid var(--line);background:var(--paper);color:var(--ink);width:100%;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--furrow);}
+label{font-size:12.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px;}
+.field{margin-bottom:14px;}
+
+.card{
+  background:var(--paper);border:1.5px solid var(--line);border-radius:var(--radius);
+}
+.container{max-width:1180px;margin:0 auto;padding:0 20px;}
+
+/* ---- spec plate — signature element ---- */
+.plate{
+  background:var(--ink);color:var(--husk);border-radius:8px;padding:16px 18px;
+  position:relative;border:1px solid #000;
+}
+.plate::before,.plate::after,.plate .rivet-tl,.plate .rivet-tr,.plate .rivet-bl,.plate .rivet-br{content:'';}
+.plate-rivets span{
+  position:absolute;width:6px;height:6px;border-radius:50%;
+  background:#565f4d;box-shadow:inset 0 1px 1px rgba(0,0,0,.5);
+}
+.plate-rivets span:nth-child(1){top:8px;left:8px;}
+.plate-rivets span:nth-child(2){top:8px;right:8px;}
+.plate-rivets span:nth-child(3){bottom:8px;left:8px;}
+.plate-rivets span:nth-child(4){bottom:8px;right:8px;}
+.plate-row{display:flex;justify-content:space-between;align-items:baseline;font-family:'IBM Plex Mono',monospace;font-size:13px;padding:5px 0;border-bottom:1px dashed rgba(239,234,218,.18);}
+.plate-row:last-child{border-bottom:none;}
+.plate-row.total{font-size:16px;font-weight:700;border-top:1.5px solid var(--harvest);margin-top:6px;padding-top:10px;border-bottom:none;color:var(--harvest);}
+.plate-label{color:#b9c0ac;letter-spacing:.02em;}
+
+/* ---- badges ---- */
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:100px;letter-spacing:.02em;}
+.badge-verified{background:rgba(63,107,62,.13);color:var(--furrow-dark);}
+.badge-pending{background:rgba(181,130,47,.15);color:var(--harvest-dark);}
+.badge-rejected{background:rgba(163,74,40,.13);color:var(--rust);}
+.badge-neutral{background:var(--husk-2);color:var(--ink-soft);}
+.status{font-size:11px;font-weight:800;padding:4px 10px;border-radius:5px;text-transform:uppercase;letter-spacing:.05em;}
+.status.PENDING{background:rgba(181,130,47,.16);color:var(--harvest-dark);}
+.status.CONFIRMED{background:rgba(63,107,62,.16);color:var(--furrow-dark);}
+.status.REJECTED{background:rgba(163,74,40,.14);color:var(--rust);}
+.status.CANCELLED{background:var(--husk-2);color:var(--ink-soft);}
+.status.ONGOING{background:rgba(63,107,62,.28);color:var(--furrow-dark);}
+.status.COMPLETED{background:var(--loam);color:var(--husk);}
+.status.DISPUTED{background:var(--rust);color:var(--husk);}
+
+/* ---- toast ---- */
+#toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:320px;}
+.toast{
+  background:var(--ink);color:var(--husk);padding:12px 16px;border-radius:8px;font-size:13.5px;font-weight:600;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);animation:toast-in .25s ease;
+}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ---- landing ---- */
+.hero{background:var(--loam);color:var(--husk);position:relative;overflow:hidden;}
+.hero-inner{max-width:1180px;margin:0 auto;padding:76px 20px 90px;position:relative;z-index:2;}
+.hero-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--harvest);margin-bottom:18px;}
+.hero h1{font-size:52px;line-height:1.04;max-width:760px;color:var(--husk);}
+.hero h1 em{font-style:normal;color:var(--harvest);}
+.hero p.lede{font-size:17px;color:#c9d0be;max-width:520px;margin-top:18px;line-height:1.55;}
+.field-rows{position:absolute;inset:0;opacity:.08;background-image:repeating-linear-gradient(180deg, transparent, transparent 38px, var(--harvest) 38px, var(--harvest) 40px);z-index:1;}
+.hero-search{
+  margin-top:34px;background:var(--paper);border-radius:12px;padding:18px;
+  display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:10px;max-width:820px;
+  box-shadow:6px 6px 0 rgba(0,0,0,.35);
+}
+.hero-search input,.hero-search select{color:var(--ink);}
+.hero-stats{display:flex;gap:38px;margin-top:46px;flex-wrap:wrap;}
+.hero-stat b{font-family:'IBM Plex Mono',monospace;font-size:26px;color:var(--harvest);display:block;}
+.hero-stat span{font-size:12px;color:#a9b09c;text-transform:uppercase;letter-spacing:.06em;}
+
+.section{padding:64px 0;}
+.section-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;gap:16px;flex-wrap:wrap;}
+.section-head h2{font-size:28px;}
+.section-head p{color:var(--ink-soft);margin-top:6px;font-size:14.5px;max-width:480px;}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--furrow);margin-bottom:10px;font-weight:700;}
+
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.cat-card{
+  background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:16px;
+  transition:border-color .15s ease, transform .15s ease;
+}
+.cat-card:hover{border-color:var(--furrow);transform:translateY(-2px);}
+.cat-icon{font-size:26px;margin-bottom:10px;display:block;}
+.cat-card b{font-size:14px;display:block;}
+.cat-card span{font-size:12px;color:var(--ink-soft);}
+
+.machine-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;}
+.m-card{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s ease, transform .15s ease;}
+.m-card:hover{box-shadow:5px 5px 0 var(--line);transform:translateY(-2px);}
+.m-media{height:140px;background:linear-gradient(135deg,var(--furrow),var(--loam));display:flex;align-items:center;justify-content:center;font-size:44px;position:relative;}
+.m-media .fav{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(251,249,242,.92);display:flex;align-items:center;justify-content:center;font-size:14px;border:none;}
+.m-body{padding:14px 16px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.m-cat{font-size:11px;color:var(--furrow-dark);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.m-title{font-size:16px;font-weight:800;font-family:'Archivo Expanded',sans-serif;}
+.m-meta{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.m-price{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px dashed var(--line);}
+.m-price b{font-family:'IBM Plex Mono',monospace;font-size:17px;}
+.m-price span{font-size:11px;color:var(--ink-soft);}
+.rating{font-size:12.5px;color:var(--harvest-dark);font-weight:700;display:flex;align-items:center;gap:3px;}
+
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.step-card{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:20px;}
+.step-num{font-family:'IBM Plex Mono',monospace;color:var(--harvest-dark);font-size:13px;font-weight:700;margin-bottom:10px;}
+.step-card h4{font-size:15px;margin-bottom:6px;}
+.step-card p{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0;}
+
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.testi{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:20px;}
+.testi p{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px;}
+.testi .who{font-size:12.5px;color:var(--ink-soft);font-weight:700;}
+
+.faq-item{border-bottom:1px solid var(--line);padding:16px 0;}
+.faq-q{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:700;font-size:14.5px;}
+.faq-a{font-size:13.5px;color:var(--ink-soft);margin-top:10px;line-height:1.6;display:none;}
+.faq-item.open .faq-a{display:block;}
+
+footer{background:var(--loam);color:#a9b09c;padding:48px 0 24px;margin-top:40px;}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:24px;}
+.footer-grid h5{color:var(--husk);font-size:13px;margin-bottom:12px;}
+.footer-grid a{display:block;font-size:13px;padding:4px 0;color:#a9b09c;}
+.footer-grid a:hover{color:var(--husk);}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);margin-top:32px;padding-top:20px;font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
+/* ---- auth ---- */
+.auth-wrap{max-width:420px;margin:60px auto;padding:0 20px;}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+.role-opt{border:1.5px solid var(--line);border-radius:8px;padding:12px;text-align:left;background:var(--paper);}
+.role-opt.active{border-color:var(--furrow);background:rgba(63,107,62,.07);}
+.role-opt b{display:block;font-size:13.5px;}
+.role-opt span{font-size:11.5px;color:var(--ink-soft);}
+.demo-box{background:var(--husk-2);border-radius:8px;padding:12px 14px;font-size:12.5px;color:var(--ink-soft);margin-top:16px;line-height:1.6;}
+.demo-box b{color:var(--ink);}
+
+/* ---- dashboard shell ---- */
+.dash{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 63px);}
+.sidebar{background:var(--loam);color:var(--husk);padding:22px 14px;position:sticky;top:63px;height:calc(100vh - 63px);}
+.side-role{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--harvest);font-weight:700;padding:0 10px 14px;}
+.side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:7px;font-size:13.5px;font-weight:600;color:#c9d0be;margin-bottom:2px;}
+.side-link:hover{background:var(--loam-2);color:var(--husk);}
+.side-link.active{background:var(--furrow);color:var(--husk);}
+.dash-main{padding:26px 28px;max-width:1040px;}
+.dash-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+.dash-head h2{font-size:24px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:26px;}
+.kpi{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:16px 18px;}
+.kpi span{font-size:11.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+.kpi b{font-family:'IBM Plex Mono',monospace;font-size:26px;display:block;margin-top:6px;}
+.kpi small{font-size:11.5px;color:var(--furrow-dark);font-weight:700;}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:10px 12px;border-bottom:1.5px solid var(--line);}
+td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.table-wrap{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;overflow-x:auto;}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--ink-soft);}
+.empty-state .glyph{font-size:34px;margin-bottom:10px;}
+.empty-state h4{font-size:15px;color:var(--ink);margin-bottom:6px;}
+.empty-state p{font-size:13px;max-width:320px;margin:0 auto;}
+
+.bar{height:8px;border-radius:5px;background:var(--husk-2);overflow:hidden;}
+.bar > div{height:100%;background:var(--furrow);}
+
+.tabs{display:flex;gap:6px;border-bottom:1.5px solid var(--line);margin-bottom:20px;flex-wrap:wrap;}
+.tab{padding:9px 14px;font-size:13px;font-weight:700;color:var(--ink-soft);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;}
+.tab.active{color:var(--furrow-dark);border-color:var(--furrow);}
+
+/* ---- modal ---- */
+.modal-bg{position:fixed;inset:0;background:rgba(20,22,16,.55);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+.modal{background:var(--paper);border-radius:12px;max-width:640px;width:100%;padding:26px;position:relative;}
+.modal-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--line);background:var(--husk);font-size:15px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* search/filter page */
+.search-layout{display:grid;grid-template-columns:230px 1fr;gap:22px;align-items:start;}
+.filter-box{background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:16px;position:sticky;top:80px;}
+.filter-box h5{font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;color:var(--ink-soft);}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.chip{padding:6px 11px;border-radius:100px;border:1.3px solid var(--line);font-size:12px;font-weight:600;background:var(--husk);}
+.chip.active{background:var(--furrow);border-color:var(--furrow);color:var(--husk);}
+.results-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+
+.rev{border-bottom:1px solid var(--line);padding:14px 0;}
+.rev:last-child{border-bottom:none;}
+.rev-top{display:flex;justify-content:space-between;font-size:13px;font-weight:700;}
+.rev p{font-size:13.5px;color:var(--ink-soft);margin:6px 0 0;line-height:1.5;}
+
+.notif-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px;}
+.notif-item .dot{width:8px;height:8px;border-radius:50%;background:var(--furrow);margin-top:5px;flex-shrink:0;}
+.notif-item.read .dot{background:var(--line);}
+.notif-item b{display:block;font-size:13px;}
+.notif-item span{color:var(--ink-soft);font-size:12px;}
+
+@media (max-width:900px){
+  .hero h1{font-size:36px;}
+  .hero-search{grid-template-columns:1fr;}
+  .dash{grid-template-columns:1fr;}
+  .sidebar{position:static;height:auto;display:flex;overflow-x:auto;gap:4px;}
+  .side-role{display:none;}
+  .steps,.testi-grid,.footer-grid{grid-template-columns:1fr 1fr;}
+  .search-layout{grid-template-columns:1fr;}
+  .filter-box{position:static;}
+  .grid-2{grid-template-columns:1fr;}
+  .nav-links{display:none;}
+}
+@media (max-width:560px){
+  .steps,.testi-grid,.footer-grid,.kpi-grid{grid-template-columns:1fr;}
+  .hero h1{font-size:30px;}
+  .container{padding:0 14px;}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast-wrap"></div>
+
+<script>
+/* ============================================================
+   FARMCONNECT — single-file interactive demo
+   Persistent shared marketplace state via window.storage.
+   All data below is fictional demo/seed data.
+   ============================================================ */
+
+const CATEGORIES = [
+  {id:'tractor', name:'Tractor', icon:'🚜'},
+  {id:'harvester', name:'Harvester', icon:'🌾'},
+  {id:'rotavator', name:'Rotavator', icon:'⚙️'},
+  {id:'cultivator', name:'Cultivator', icon:'🔧'},
+  {id:'seed-drill', name:'Seed Drill', icon:'🌱'},
+  {id:'plough', name:'Plough', icon:'⛏️'},
+  {id:'sprayer', name:'Sprayer', icon:'💦'},
+  {id:'thresher', name:'Thresher', icon:'🌿'},
+  {id:'trailer', name:'Trailer', icon:'🚛'},
+  {id:'tiller', name:'Tiller', icon:'🔩'},
+  {id:'baler', name:'Baler', icon:'🧺'},
+  {id:'drone', name:'Agri Drone', icon:'🛸'},
+];
+
+const LOCATIONS = [
+  {village:'Anakapalle', mandal:'Anakapalle', district:'Visakhapatnam', state:'Andhra Pradesh'},
+  {village:'Bheemunipatnam', mandal:'Bheemunipatnam', district:'Visakhapatnam', state:'Andhra Pradesh'},
+  {village:'Gudivada', mandal:'Gudivada', district:'Krishna', state:'Andhra Pradesh'},
+  {village:'Mancherial', mandal:'Mancherial', district:'Mancherial', state:'Telangana'},
+  {village:'Karimnagar', mandal:'Karimnagar', district:'Karimnagar', state:'Telangana'},
+  {village:'Erode', mandal:'Erode', district:'Erode', state:'Tamil Nadu'},
+  {village:'Sangli', mandal:'Sangli', district:'Sangli', state:'Maharashtra'},
+  {village:'Ludhiana', mandal:'Ludhiana', district:'Ludhiana', state:'Punjab'},
+];
+
+const FIRST_NAMES = ['Ravi','Suresh','Lakshmi','Venkatesh','Anitha','Prasad','Kiran','Meena','Ramesh','Sunita','Naveen','Padma','Srinivas','Deepa','Manohar','Radha','Krishna','Sowmya','Arjun','Vijaya'];
+const LAST_NAMES = ['Reddy','Naidu','Rao','Kumar','Devi','Sharma','Patel','Yadav','Singh','Verma'];
+const BRANDS = {tractor:['Mahindra','Swaraj','John Deere','Sonalika','Massey Ferguson'], harvester:['New Holland','John Deere','Preet','Kartar'], rotavator:['Shaktiman','Fieldking','Maschio'], cultivator:['Fieldking','Khedut'], 'seed-drill':['Amar','Dasmesh'], plough:['Lemken','Fieldking'], sprayer:['Aspee','Neptune'], thresher:['Dashmesh','Kartar'], trailer:['Balwaan','Standard'], tiller:['VST','Kubota'], baler:['New Holland','Class'], drone:['Garuda Aerospace','IoTechWorld']};
+
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function uid(prefix){return prefix+'_'+Math.random().toString(36).slice(2,9);}
+function money(n){return '₹'+Math.round(n).toLocaleString('en-IN');}
+function fmtDate(d){return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+
+/* ---------------- centralized pricing engine ---------------- */
+// DEFAULT_PLATFORM_FEE_RATE seeds DB.platformFeeConfig on first load. From
+// then on, the LIVE rate lives in DB.platformFeeConfig.rate (admin-editable
+// on the Platform Fee settings page) and every NEW booking picks it up
+// automatically. calculatePricing() is the ONLY place the fee formula is
+// implemented — seeded demo data and the live booking modal alike call it.
+// Once a booking is created, its own stored `pricing.rate`/`pricing.platformFee`
+// never change again, even if the admin changes the live rate afterwards.
+const DEFAULT_PLATFORM_FEE_RATE = 0.02; // 2%
+function currentPlatformFeeRate(){
+  return (typeof DB!=='undefined' && DB && DB.platformFeeConfig) ? DB.platformFeeConfig.rate : DEFAULT_PLATFORM_FEE_RATE;
+}
+function pctLabel(rate){ return (rate*100).toFixed(2)+'%'; }
+function calculatePricing({subtotal, operatorCost=0, transport=0, discount=0, rate}){
+  const effectiveRate = typeof rate==='number' ? rate : currentPlatformFeeRate();
+  const platformFee = Math.round((subtotal+operatorCost)*effectiveRate);
+  const total = subtotal+operatorCost+transport+platformFee-discount;
+  return {subtotal, operatorCost, transport, platformFee, discount, total, rate: effectiveRate};
+}
+
+/* ---------------- seed generation (deterministic-ish, runs once) ---------------- */
+function generateSeed(){
+  const owners = [];
+  for(let i=0;i<10;i++){
+    const loc = pick(LOCATIONS);
+    owners.push({id:uid('own'), name:pick(FIRST_NAMES)+' '+pick(LAST_NAMES), role:'owner', location:loc, verified: Math.random()>0.25, rating:(3.6+Math.random()*1.3).toFixed(1), joined: '2024-0'+rnd(1,9)+'-'+rnd(10,28)});
+  }
+  const operators = [];
+  for(let i=0;i<10;i++){
+    const loc = pick(LOCATIONS);
+    operators.push({id:uid('opr'), name:pick(FIRST_NAMES)+' '+pick(LAST_NAMES), role:'operator', location:loc, verified: Math.random()>0.3, rating:(3.8+Math.random()*1.2).toFixed(1), experience: rnd(1,18), expertise: [pick(CATEGORIES).name, pick(CATEGORIES).name], serviceRadius: rnd(10,40), pricePerDay: rnd(400,900), joined:'2024-0'+rnd(1,9)+'-'+rnd(10,28)});
+  }
+  const farmers = [];
+  for(let i=0;i<20;i++){
+    const loc = pick(LOCATIONS);
+    farmers.push({id:uid('frm'), name:pick(FIRST_NAMES)+' '+pick(LAST_NAMES), role:'farmer', location:loc, farmSize: rnd(1,15), crops:[pick(['Rice','Cotton','Sugarcane','Maize','Groundnut','Chilli'])], joined:'2024-0'+rnd(1,9)+'-'+rnd(10,28)});
+  }
+  const machines = [];
+  for(let i=0;i<50;i++){
+    const cat = pick(CATEGORIES);
+    const owner = pick(owners);
+    const brand = pick(BRANDS[cat.id]||['Generic']);
+    const basePerDay = {tractor:1400,harvester:3200,rotavator:900,cultivator:700,'seed-drill':650,plough:600,sprayer:500,thresher:1100,trailer:550,tiller:800,baler:1600,drone:1800}[cat.id]||800;
+    const perDay = basePerDay + rnd(-150,400);
+    machines.push({
+      id: uid('mch'),
+      name: `${brand} ${cat.name} ${rnd(35,75)}HP`,
+      categoryId: cat.id,
+      brand, model: 'M-'+rnd(100,999),
+      year: rnd(2016,2025),
+      horsepower: rnd(28,75),
+      fuelType: pick(['Diesel','Diesel','Electric']),
+      condition: pick(['Excellent','Good','Good','Fair']),
+      pricePerHour: Math.round(perDay/9),
+      pricePerDay: perDay,
+      pricePerWeek: Math.round(perDay*6),
+      deposit: Math.round(perDay*1.5),
+      ownerId: owner.id,
+      location: owner.location,
+      serviceRadius: rnd(15,40),
+      description: `Well-maintained ${cat.name.toLowerCase()} suited for ${rnd(2,10)}–${rnd(11,25)} acre plots. Regularly serviced, operator available on request.`,
+      features: ['4WD available','Operator optional','Fuel not included','On-site delivery available'].filter(()=>Math.random()>0.3),
+      rating: (3.4+Math.random()*1.5).toFixed(1),
+      numRentals: rnd(2,64),
+      lastServiceDate: `2026-0${rnd(1,6)}-${rnd(10,28)}`,
+      nextServiceDate: `2026-${rnd(8,12)>9?rnd(8,12):'0'+rnd(8,12)}-${rnd(10,28)}`,
+      verification: Math.random()>0.2 ? 'VERIFIED' : (Math.random()>0.5?'PENDING':'PENDING'),
+      status: pick(['AVAILABLE','AVAILABLE','AVAILABLE','BOOKED','MAINTENANCE']),
+      operatorAvailable: Math.random()>0.4,
+      emoji: cat.icon,
+    });
+  }
+  const bookings = [];
+  const statuses = ['PENDING','CONFIRMED','REJECTED','CANCELLED','ONGOING','COMPLETED','COMPLETED','COMPLETED'];
+  for(let i=0;i<110;i++){
+    const machine = pick(machines);
+    const farmer = pick(farmers);
+    const days = rnd(1,4);
+    const withOperator = Math.random()>0.5;
+    const start = new Date(2026, rnd(0,7), rnd(1,27));
+    const subtotal = machine.pricePerDay*days;
+    const operatorCost = withOperator ? 500*days : 0;
+    const transport = Math.random()>0.5 ? rnd(150,450) : 0;
+    const discount = Math.random()>0.85 ? Math.round(subtotal*0.05) : 0;
+    const {platformFee, total, rate} = calculatePricing({subtotal, operatorCost, transport, discount, rate: DEFAULT_PLATFORM_FEE_RATE});
+    const status = pick(statuses);
+    const paymentStatus = status==='COMPLETED' ? (Math.random()>0.08?'PAID':'REFUNDED') : (status==='CONFIRMED'||status==='ONGOING') ? 'PENDING' : (status==='REJECTED'||status==='CANCELLED') ? 'FAILED' : 'PENDING';
+    bookings.push({
+      id: uid('bkg'),
+      machineId: machine.id,
+      farmerId: farmer.id,
+      ownerId: machine.ownerId,
+      operatorId: withOperator ? pick(operators).id : null,
+      startDate: start.toISOString().slice(0,10),
+      days,
+      withOperator,
+      status,
+      paymentStatus,
+      pricing:{subtotal, operatorCost, transport, platformFee, discount, total, rate},
+      createdAt: start.toISOString(),
+      reviewed:false,
+    });
+  }
+  const reviews = [];
+  bookings.filter(b=>b.status==='COMPLETED').forEach(b=>{
+    if(Math.random()>0.45){
+      reviews.push({id:uid('rev'), machineId:b.machineId, farmerId:b.farmerId, ownerId:b.ownerId, rating: rnd(3,5), comment: pick([
+        'Machine worked well, arrived on time.',
+        'Good condition, operator was skilled.',
+        'Decent experience, would rent again.',
+        'Slight delay but owner was communicative.',
+        'Excellent service, saved us a lot of time this season.',
+        'Fuel efficiency was better than expected.',
+      ]), createdAt: b.startDate, bookingId:b.id});
+      b.reviewed = true;
+    }
+  });
+  const notifications = [];
+  farmers.slice(0,8).forEach(f=>{
+    notifications.push({id:uid('ntf'), userId:f.id, title:'Booking confirmed', body:'Your rental request was accepted by the owner.', read: Math.random()>0.5, createdAt: new Date().toISOString()});
+  });
+
+  const seedDate = new Date().toISOString();
+  const platformFeeConfig = {rate: DEFAULT_PLATFORM_FEE_RATE, effectiveFrom: seedDate, updatedBy: null, reason: 'Initial platform launch rate'};
+  const platformFeeHistory = [{id: uid('fee'), rate: DEFAULT_PLATFORM_FEE_RATE, effectiveFrom: seedDate, effectiveTo: null, changedBy: 'System (seed)', reason: 'Initial platform launch rate'}];
+  const n8nWorkflows = [
+    {key:'user-registration', name:'User Registration', enabled:true},
+    {key:'otp', name:'OTP Delivery', enabled:true},
+    {key:'booking-created', name:'Booking Created', enabled:true},
+    {key:'booking-confirmed', name:'Booking Confirmed', enabled:true},
+    {key:'booking-rejected', name:'Booking Rejected', enabled:true},
+    {key:'payment-success', name:'Payment Success', enabled:true},
+    {key:'payment-failed', name:'Payment Failed', enabled:true},
+    {key:'booking-timeout', name:'Owner Confirmation Timeout', enabled:true},
+    {key:'operator-matching', name:'Operator Matching', enabled:true},
+    {key:'transport', name:'Transport', enabled:false},
+    {key:'job-start', name:'Job Start', enabled:true},
+    {key:'job-completion', name:'Job Completion', enabled:true},
+    {key:'review-request', name:'Review Request', enabled:true},
+    {key:'dispute', name:'Dispute', enabled:true},
+    {key:'refund', name:'Refund', enabled:false},
+    {key:'daily-platform-report', name:'Daily Platform Report', enabled:true},
+  ].map(w=>({
+    ...w,
+    lastRunAt: new Date(Date.now()-rnd(1,600)*60000).toISOString(),
+    successCount: rnd(20,400),
+    failureCount: rnd(0,6),
+  }));
+  return {owners, operators, farmers, machines, bookings, reviews, notifications, disputes: [], conversations: [], messages: [], platformFeeConfig, platformFeeHistory, n8nWorkflows};
+}
+
+/* ---------------- storage layer ---------------- */
+const STORE_KEY = 'farmconnect:core:v1';
+let DB = null;
+let STORAGE_DEGRADED = false; // true once persistence has failed at least once — app keeps working in-memory
+
+/* ---------------- centralized storage abstraction ---------------- */
+const Storage = {
+  async get(key, shared){
+    try{
+      const res = await window.storage.get(key, shared);
+      if(res === null || res === undefined) return null;
+      if(typeof res.value !== 'string'){
+        console.error('Storage.get: unexpected response shape', res);
+        return null;
+      }
+      try{ return JSON.parse(res.value); }
+      catch(parseErr){ console.error('Storage.get: value was not valid JSON', parseErr); return null; }
+    }catch(e){
+      console.error('Storage.get failed', e);
+      return null;
+    }
+  },
+  async set(key, value, shared){
+    try{
+      const res = await window.storage.set(key, JSON.stringify(value), shared);
+      if(!res){
+        console.error('Storage.set: falsy/unexpected response');
+        STORAGE_DEGRADED = true;
+        return false;
+      }
+      STORAGE_DEGRADED = false;
+      return true;
+    }catch(e){
+      console.error('Storage.set failed', e);
+      STORAGE_DEGRADED = true;
+      return false;
+    }
+  }
+};
+
+async function loadDB(){
+  const loaded = await Storage.get(STORE_KEY, true);
+  if(loaded && Array.isArray(loaded.machines)){
+    DB = loaded;
+    // migrate older saved snapshots that predate messaging/disputes
+    if(!DB.conversations) DB.conversations = [];
+    if(!DB.messages) DB.messages = [];
+    if(!DB.disputes) DB.disputes = [];
+    if(!DB.platformFeeConfig) DB.platformFeeConfig = {rate: DEFAULT_PLATFORM_FEE_RATE, effectiveFrom: new Date().toISOString(), updatedBy: null, reason: 'Initial platform launch rate'};
+    if(!DB.platformFeeHistory) DB.platformFeeHistory = [{id: uid('fee'), rate: DB.platformFeeConfig.rate, effectiveFrom: DB.platformFeeConfig.effectiveFrom, effectiveTo: null, changedBy: 'System (seed)', reason: 'Initial platform launch rate'}];
+    if(!DB.n8nWorkflows) DB.n8nWorkflows = [];
+    DB.bookings.forEach(b=>{ if(!b.paymentStatus) b.paymentStatus = b.status==='COMPLETED'?'PAID':b.status==='REJECTED'||b.status==='CANCELLED'?'FAILED':'PENDING'; if(b.pricing && typeof b.pricing.rate!=='number') b.pricing.rate = DEFAULT_PLATFORM_FEE_RATE; });
+    DB.machines.forEach(m=>{ if(!m.nextServiceDate) m.nextServiceDate = '2026-09-15'; if(!m.lastServiceDate) m.lastServiceDate = '2026-03-10'; });
+    return;
+  }
+  DB = generateSeed();
+  await saveDB();
+}
+async function saveDB(){
+  const ok = await Storage.set(STORE_KEY, DB, true);
+  if(!ok){
+    // Data still lives in the in-memory DB object for the rest of this session —
+    // the user doesn't lose their current work, they just won't survive a hard refresh.
+    toast('Sync failed — your changes are safe for this session but may not persist after a refresh.');
+  }
+  return ok;
+}
+
+/* ---------------- session (per-browser, not shared) ---------------- */
+let SESSION = null; // {userId, role, name}
+
+/* ---------------- app state / router ---------------- */
+let ROUTE = {page:'landing', params:{}};
+let FILTERS = {q:'', category:'', maxPrice:'', sort:'newest', operatorOnly:false};
+let FAVORITES = new Set();
+let SUPPRESS_HASH = false;
+
+function encodeRoute(page, params={}){
+  switch(page){
+    case 'landing': return '#/';
+    case 'roleselect': return '#/get-started';
+    case 'login': return '#/login/'+(params.role||'farmer');
+    case 'register': return '#/register/'+(params.role||'farmer');
+    case 'otp': return '#/verify-otp/'+(params.role||'farmer');
+    case 'search': return '#/machinery';
+    case 'operators': return '#/operators';
+    case 'machine': return '#/machinery/'+(params.id||'');
+    case 'notifications': return '#/notifications';
+    case 'dashboard': return '#/'+(SESSION?SESSION.role:'account')+'/dashboard'+(params.tab?'/'+params.tab:'');
+    default: return '#/';
+  }
+}
+function decodeHash(hash){
+  const clean = (hash||'').replace(/^#\/?/, '');
+  const parts = clean.split('/').filter(Boolean);
+  if(parts.length===0) return {page:'landing', params:{}};
+  if(parts[0]==='get-started') return {page:'roleselect', params:{}};
+  if(parts[0]==='login') return {page:'login', params:{role:parts[1]||'farmer'}};
+  if(parts[0]==='register') return {page:'register', params:{role:parts[1]||'farmer'}};
+  if(parts[0]==='verify-otp') return {page:'otp', params:{role:parts[1]||'farmer', purpose:'login'}};
+  if(parts[0]==='machinery' && parts[1]) return {page:'machine', params:{id:parts[1]}};
+  if(parts[0]==='machinery') return {page:'search', params:{}};
+  if(parts[0]==='operators') return {page:'operators', params:{}};
+  if(parts[0]==='notifications') return {page:'notifications', params:{}};
+  if(['farmer','owner','operator','admin'].includes(parts[0]) && parts[1]==='dashboard') return {page:'dashboard', params:{tab:parts[2], _role:parts[0]}};
+  return {page:'landing', params:{}};
+}
+/* role-based route guard — protects /:role/dashboard from other roles and anonymous access */
+function applyRouteGuard(route){
+  if(route.page==='dashboard'){
+    if(!SESSION) return {page:'login', params:{role:route.params._role||'farmer'}};
+    if(route.params._role && route.params._role!==SESSION.role){
+      toast("You don't have access to that dashboard.");
+      return {page:'dashboard', params:{tab:'overview'}};
+    }
+  }
+  return route;
+}
+function nav(page, params={}){
+  const guarded = applyRouteGuard({page, params});
+  ROUTE = guarded;
+  SUPPRESS_HASH = true;
+  location.hash = encodeRoute(guarded.page, guarded.params);
+  window.scrollTo(0,0);
+  render();
+}
+function initRouter(){
+  window.addEventListener('hashchange', ()=>{
+    if(SUPPRESS_HASH){ SUPPRESS_HASH = false; return; }
+    const guarded = applyRouteGuard(decodeHash(location.hash));
+    ROUTE = guarded;
+    window.scrollTo(0,0);
+    render();
+  });
+  if(location.hash){
+    ROUTE = applyRouteGuard(decodeHash(location.hash));
+  }
+}
+function toast(msg){
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className='toast'; el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+
+/* ---------------- helpers to query DB ---------------- */
+function getMachine(id){ return DB.machines.find(m=>m.id===id); }
+function getOwner(id){ return DB.owners.find(o=>o.id===id); }
+function getOperator(id){ return DB.operators.find(o=>o.id===id); }
+function getFarmer(id){ return DB.farmers.find(o=>o.id===id); }
+function getCategory(id){ return CATEGORIES.find(c=>c.id===id); }
+function machineRatingReviews(mid){ return DB.reviews.filter(r=>r.machineId===mid); }
+function currentUserBookings(){
+  if(!SESSION) return [];
+  if(SESSION.role==='farmer') return DB.bookings.filter(b=>b.farmerId===SESSION.userId);
+  if(SESSION.role==='owner') return DB.bookings.filter(b=>b.ownerId===SESSION.userId);
+  if(SESSION.role==='operator') return DB.bookings.filter(b=>b.operatorId===SESSION.userId);
+  return DB.bookings;
+}
+
+/* ============================================================
+   RENDER: shell
+   ============================================================ */
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  app.appendChild(renderTopbar());
+  const main = document.createElement('main');
+  main.appendChild(renderPage());
+  app.appendChild(main);
+  if(['landing'].includes(ROUTE.page)) app.appendChild(renderFooter());
+}
+
+function renderTopbar(){
+  const bar = document.createElement('div');
+  bar.className='topbar';
+  const unread = SESSION ? DB.notifications.filter(n=>n.userId===SESSION.userId && !n.read).length : 0;
+  bar.innerHTML = `
+    <div class="topbar-inner">
+      <div class="brand" style="cursor:pointer" id="logo-home">
+        <div class="brand-mark">FC</div>
+        FarmConnect
+      </div>
+      <div class="nav-links">
+        <a href="#" id="nav-browse">Browse Machinery</a>
+        <a href="#" id="nav-operators">Operators</a>
+        <a href="#" id="nav-how">How it works</a>
+      </div>
+      <div class="topbar-right">
+        ${SESSION ? `
+          <button class="icon-btn" id="nav-notifs">🔔${unread?'<span class="badge-dot"></span>':''}</button>
+          <button class="pill-btn" id="nav-dash">${SESSION.name.split(' ')[0]} · ${SESSION.role}</button>
+          <button class="pill-btn" id="nav-logout">Logout</button>
+        ` : `
+          <button class="pill-btn" id="nav-login">Log in</button>
+          <button class="pill-btn solid" id="nav-signup">Get started</button>
+        `}
+      </div>
+    </div>`;
+  bar.querySelector('#logo-home').onclick = ()=>nav('landing');
+  bar.querySelector('#nav-browse').onclick = (e)=>{e.preventDefault(); nav('search');};
+  bar.querySelector('#nav-operators').onclick = (e)=>{e.preventDefault(); nav('operators');};
+  bar.querySelector('#nav-how').onclick = (e)=>{e.preventDefault(); nav('landing'); setTimeout(()=>document.getElementById('how-it-works')?.scrollIntoView({behavior:'smooth'}),50);};
+  if(SESSION){
+    bar.querySelector('#nav-notifs').onclick = ()=>nav('notifications');
+    bar.querySelector('#nav-dash').onclick = ()=>nav('dashboard');
+    bar.querySelector('#nav-logout').onclick = ()=>{SESSION=null; nav('landing'); toast('Logged out');};
+  } else {
+    bar.querySelector('#nav-login').onclick = ()=>nav('roleselect');
+    bar.querySelector('#nav-signup').onclick = ()=>nav('roleselect');
+  }
+  return bar;
+}
+
+function renderFooter(){
+  const f = document.createElement('footer');
+  f.innerHTML = `
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="brand" style="color:var(--husk);margin-bottom:10px;"><div class="brand-mark">FC</div>FarmConnect</div>
+          <p style="font-size:13px;max-width:280px;line-height:1.6;">The digital marketplace connecting farmers, machinery owners, operators and agricultural service providers across India.</p>
+        </div>
+        <div><h5>Platform</h5><a href="#">Browse machinery</a><a href="#">Find operators</a><a href="#">List your machine</a><a href="#">Pricing</a></div>
+        <div><h5>Company</h5><a href="#">About</a><a href="#">Careers</a><a href="#">Blog</a><a href="#">Contact</a></div>
+        <div><h5>Support</h5><a href="#">Help center</a><a href="#">Safety</a><a href="#">Terms</a><a href="#">Privacy</a></div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 FarmConnect. Demo product — not a live marketplace.</span>
+        <span>Right Machine. Right Time. Right Farm.</span>
+      </div>
+    </div>`;
+  return f;
+}
+
+function renderPage(){
+  const wrap = document.createElement('div');
+  switch(ROUTE.page){
+    case 'landing': wrap.appendChild(pageLanding()); break;
+    case 'roleselect': wrap.appendChild(pageRoleSelect()); break;
+    case 'login': wrap.appendChild(pageLogin(ROUTE.params.role||'farmer')); break;
+    case 'register': wrap.appendChild(pageRegister(ROUTE.params.role||'farmer')); break;
+    case 'otp': wrap.appendChild(pageOtp(ROUTE.params)); break;
+    case 'search': wrap.appendChild(pageSearch()); break;
+    case 'operators': wrap.appendChild(pageOperators()); break;
+    case 'machine': wrap.appendChild(pageMachineDetail()); break;
+    case 'dashboard': wrap.appendChild(pageDashboard()); break;
+    case 'notifications': wrap.appendChild(pageNotifications()); break;
+    default: wrap.appendChild(pageLanding());
+  }
+  return wrap;
+}
+
+/* ============================================================
+   LANDING PAGE
+   ============================================================ */
+function pageLanding(){
+  const el = document.createElement('div');
+  const totalMachines = DB.machines.length;
+  const totalBookings = DB.bookings.length;
+  const totalOwners = DB.owners.filter(o=>o.verified).length;
+  const featured = [...DB.machines].sort((a,b)=>b.numRentals-a.numRentals).slice(0,6);
+
+  el.innerHTML = `
+    <section class="hero">
+      <div class="field-rows"></div>
+      <div class="hero-inner">
+        <div class="hero-eyebrow">Agricultural Machinery Marketplace</div>
+        <h1>Rent the right farm machinery. <em>When you need it.</em></h1>
+        <p class="lede">FarmConnect connects farmers with verified machinery owners and skilled operators — search by crop, distance and budget, and book in minutes.</p>
+        <div class="hero-search">
+          <div>
+            <label style="color:var(--ink-soft)">What do you need</label>
+            <input id="hs-q" placeholder="e.g. tractor, harvester, rotavator" />
+          </div>
+          <div>
+            <label style="color:var(--ink-soft)">Category</label>
+            <select id="hs-cat"><option value="">All categories</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
+          </div>
+          <div>
+            <label style="color:var(--ink-soft)">Location</label>
+            <input id="hs-loc" placeholder="Your village / district" />
+          </div>
+          <button class="btn btn-primary" id="hs-go" style="align-self:end;">Search</button>
+        </div>
+        <button class="btn btn-ghost" id="hs-tellus" style="color:#c9d0be;padding-left:2px;margin-top:6px;">Not sure what you need? Tell us your requirement →</button>
+        <div class="hero-stats">
+          <div class="hero-stat"><b>${totalMachines}+</b><span>Machines listed</span></div>
+          <div class="hero-stat"><b>${totalOwners}</b><span>Verified owners</span></div>
+          <div class="hero-stat"><b>${totalBookings}+</b><span>Bookings completed</span></div>
+          <div class="hero-stat"><b>${LOCATIONS.length}</b><span>Districts served</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <div class="eyebrow">Browse by category</div>
+      <div class="section-head"><h2>Every machine your farm needs</h2></div>
+      <div class="cat-grid">
+        ${CATEGORIES.map(c=>`
+          <button class="cat-card" data-cat="${c.id}" style="text-align:left;width:100%;">
+            <span class="cat-icon">${c.icon}</span>
+            <b>${c.name}</b>
+            <span>${DB.machines.filter(m=>m.categoryId===c.id).length} listed</span>
+          </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="section container" style="background:var(--husk-2);border-radius:16px;padding:44px 28px;">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Featured</div>
+          <h2>Most rented this season</h2>
+        </div>
+        <button class="btn btn-outline" id="see-all">See all machinery →</button>
+      </div>
+      <div class="machine-grid">${featured.map(m=>machineCardHTML(m)).join('')}</div>
+    </section>
+
+    <section class="section container" id="how-it-works">
+      <div class="eyebrow">How it works</div>
+      <div class="section-head"><h2>Booking a machine takes four steps</h2></div>
+      <div class="steps">
+        <div class="step-card"><div class="step-num">01</div><h4>Search & compare</h4><p>Filter by category, distance, price and availability to find the right fit.</p></div>
+        <div class="step-card"><div class="step-num">02</div><h4>Request a booking</h4><p>Pick your dates, add an operator if needed, and see the full price breakdown upfront.</p></div>
+        <div class="step-card"><div class="step-num">03</div><h4>Owner confirms</h4><p>The machinery owner accepts or declines — no surprises, no double-booking.</p></div>
+        <div class="step-card"><div class="step-num">04</div><h4>Rent & review</h4><p>Use the machine, pay through the platform, and leave a rating for the community.</p></div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <div class="eyebrow">Trust & safety</div>
+      <div class="section-head"><h2>Built for a marketplace where trust matters</h2></div>
+      <div class="grid-2" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="card" style="padding:20px;"><span class="badge badge-verified">✓ Verified Owners</span><p style="font-size:13px;color:var(--ink-soft);margin-top:10px;">Every owner is identity-checked before their listings go live.</p></div>
+        <div class="card" style="padding:20px;"><span class="badge badge-verified">✓ Verified Machinery</span><p style="font-size:13px;color:var(--ink-soft);margin-top:10px;">Listings are reviewed for accuracy before appearing in search.</p></div>
+        <div class="card" style="padding:20px;"><span class="badge badge-verified">✓ Verified Operators</span><p style="font-size:13px;color:var(--ink-soft);margin-top:10px;">Operators are rated after every job, keeping quality high.</p></div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <div class="eyebrow">Testimonials</div>
+      <div class="section-head"><h2>What the community says</h2></div>
+      <div class="testi-grid">
+        <div class="testi"><p>"I used to wait days to find a harvester at the right price. Now I compare three owners in minutes."</p><div class="who">Ravi Reddy, Farmer — Krishna District</div></div>
+        <div class="testi"><p>"My tractor used to sit idle half the season. FarmConnect keeps it booked and I can see all my earnings in one place."</p><div class="who">Lakshmi Naidu, Machinery Owner</div></div>
+        <div class="testi"><p>"As an operator, the job requests come straight to my phone. I set my own radius and rates."</p><div class="who">Suresh Kumar, Drone Operator</div></div>
+      </div>
+    </section>
+
+    <section class="section container" style="max-width:760px;">
+      <div class="eyebrow">FAQ</div>
+      <div class="section-head"><h2>Common questions</h2></div>
+      <div id="faq-list">
+        ${[
+          ['How is the rental price calculated?','The price breakdown includes the base rental rate, an optional operator fee, transport cost if applicable, and a small platform fee — shown transparently before you confirm a booking.'],
+          ['What happens if I need to cancel?','Cancellation is possible according to each listing\'s policy, shown at booking time. Repeated late cancellations affect your account standing.'],
+          ['How are owners and operators verified?','FarmConnect reviews identity and listing details before granting a Verified badge. Verification status is always visible on a profile.'],
+          ['Is payment handled on the platform?','This demo uses a mock payment flow so you can see the full invoice and status lifecycle without real transactions.'],
+        ].map(([q,a],i)=>`
+          <div class="faq-item" data-i="${i}">
+            <div class="faq-q"><span>${q}</span><span>+</span></div>
+            <div class="faq-a">${a}</div>
+          </div>`).join('')}
+      </div>
+    </section>
+
+    <section class="section container" style="text-align:center;padding:60px 20px;background:var(--furrow);border-radius:16px;color:var(--husk);">
+      <h2 style="font-size:28px;color:var(--husk);">Ready to find your next machine?</h2>
+      <p style="color:#dfe8db;margin:12px 0 22px;">Join farmers, owners and operators already using FarmConnect.</p>
+      <button class="btn btn-dark" id="cta-signup">Get started free</button>
+    </section>
+  `;
+
+  el.querySelectorAll('.cat-card').forEach(b=>b.onclick=()=>{FILTERS.category=b.dataset.cat; nav('search');});
+  el.querySelectorAll('.m-card').forEach(c=>c.onclick=()=>nav('machine',{id:c.dataset.id}));
+  el.querySelector('#see-all').onclick = ()=>nav('search');
+  el.querySelector('#hs-go').onclick = ()=>{
+    FILTERS.q = el.querySelector('#hs-q').value;
+    FILTERS.category = el.querySelector('#hs-cat').value;
+    nav('search');
+  };
+  el.querySelector('#hs-tellus').onclick = ()=>openRequirementModal();
+  el.querySelectorAll('.faq-item').forEach(f=>f.querySelector('.faq-q').onclick=()=>f.classList.toggle('open'));
+  el.querySelector('#cta-signup').onclick = ()=>nav('roleselect');
+  return el;
+}
+
+function machineCardHTML(m, opts={}){
+  const cat = getCategory(m.categoryId);
+  const fav = FAVORITES.has(m.id);
+  return `
+    <div class="m-card" data-id="${m.id}">
+      <div class="m-media">${m.emoji}
+        <button class="fav" data-fav="${m.id}">${fav?'❤️':'🤍'}</button>
+        ${opts.compare ? `<label style="position:absolute;top:10px;left:10px;background:rgba(251,249,242,.92);border-radius:6px;padding:4px 7px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;">
+          <input type="checkbox" data-compare="${m.id}" style="width:auto;margin:0;" onclick="event.stopPropagation();"> Compare
+        </label>` : ''}
+      </div>
+      <div class="m-body">
+        <div class="m-cat">${cat?cat.name:''}</div>
+        <div class="m-title">${m.name}</div>
+        <div class="m-meta">
+          ${m.verification==='VERIFIED'?'<span class="badge badge-verified">✓ Verified</span>':'<span class="badge badge-pending">Pending</span>'}
+          <span class="rating">★ ${m.rating}</span>
+          <span>· ${m.numRentals} rentals</span>
+        </div>
+        <div class="m-meta">📍 ${m.location.district}, ${m.location.state}</div>
+        <div class="m-price">
+          <div><b>${money(m.pricePerDay)}</b><br><span>per day</span></div>
+          <span class="status ${m.status}">${m.status}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* attach fav clicks after any grid render */
+function attachFavHandlers(root){
+  root.querySelectorAll('[data-fav]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const id = btn.dataset.fav;
+      if(FAVORITES.has(id)) FAVORITES.delete(id); else FAVORITES.add(id);
+      render();
+    };
+  });
+}
+
+/* ============================================================
+   ROLE SELECTION — "How will you use FarmConnect?"
+   ============================================================ */
+function pageRoleSelect(){
+  const el = document.createElement('div');
+  el.className='container'; el.style.padding='56px 20px 70px'; el.style.maxWidth='900px';
+  const roles = [
+    ['farmer','🌾','Farmer','Find and rent agricultural machinery for your farm.','Continue as Farmer'],
+    ['owner','🚜','Machinery Owner','List your machinery and earn from equipment rentals.','Continue as Owner'],
+    ['operator','👨\u200d🔧','Operator','Offer your machine operating skills to farmers.','Continue as Operator'],
+    ['admin','🛡️','Admin','Manage and monitor the FarmConnect platform.','Admin Login'],
+  ];
+  el.innerHTML = `
+    <div style="text-align:center;margin-bottom:34px;">
+      <div class="eyebrow" style="justify-content:center;display:flex;">Get started</div>
+      <h2 style="font-size:28px;">How will you use FarmConnect?</h2>
+    </div>
+    <div class="cat-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+      ${roles.map(([id,icon,label,desc,cta],i)=>`
+        <div class="card" data-role-card="${id}" style="padding:24px 20px;text-align:left;cursor:pointer;transition:transform .15s ease, box-shadow .15s ease;${id==='admin'?'opacity:.9;':''}">
+          <span style="font-size:32px;display:block;margin-bottom:12px;">${icon}</span>
+          <b style="font-size:16px;display:block;margin-bottom:6px;">${label}</b>
+          <p style="font-size:13px;color:var(--ink-soft);line-height:1.5;margin:0 0 16px;">${desc}</p>
+          <button class="btn ${id==='admin'?'btn-outline':'btn-primary'} btn-sm btn-full" data-role-btn="${id}">${cta}</button>
+        </div>`).join('')}
+    </div>
+  `;
+  el.querySelectorAll('[data-role-card]').forEach(card=>{
+    card.onmouseenter = ()=>{ card.style.transform='translateY(-3px)'; card.style.boxShadow='4px 4px 0 var(--line)'; };
+    card.onmouseleave = ()=>{ card.style.transform='none'; card.style.boxShadow='none'; };
+    card.onclick = ()=>nav('login',{role:card.dataset.roleCard});
+  });
+  el.querySelectorAll('[data-role-btn]').forEach(b=>b.onclick=(e)=>{ e.stopPropagation(); nav('login',{role:b.dataset.roleBtn}); });
+  return el;
+}
+
+const ROLE_META = {
+  farmer:   {label:'Farmer', welcome:'Welcome back, Farmer', sub:'Find the machinery you need and get your farm work done.', icon:'🌾'},
+  owner:    {label:'Machinery Owner', welcome:'Welcome back, Machinery Owner', sub:'Turn your idle machinery into income.', icon:'🚜'},
+  operator: {label:'Operator', welcome:'Welcome back, Operator', sub:'Connect with farmers who need skilled machine operators.', icon:'👨\u200d🔧'},
+  admin:    {label:'Admin', welcome:'FarmConnect Administration', sub:'Restricted access — platform staff only.', icon:'🛡️'},
+};
+
+/* ============================================================
+   PER-ROLE LOGIN
+   ============================================================ */
+function pageLogin(role){
+  const meta = ROLE_META[role] || ROLE_META.farmer;
+  const el = document.createElement('div');
+  el.className = 'auth-wrap';
+  const demoUser = role==='farmer'?DB.farmers[0] : role==='owner'?DB.owners[0] : role==='operator'?DB.operators[0] : {name:'Platform Admin'};
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" id="back-roles" style="margin-bottom:10px;">← All roles</button>
+    <div style="text-align:center;margin-bottom:18px;">
+      <span style="font-size:30px;">${meta.icon}</span>
+      <h2 style="font-size:22px;margin-top:8px;">${meta.welcome}</h2>
+      <p style="color:var(--ink-soft);font-size:13.5px;margin-top:4px;">${meta.sub}</p>
+    </div>
+    <div class="field"><label>${role==='admin'?'Admin email':'Mobile number or email'}</label><input id="lg-contact" placeholder="${role==='admin'?'admin@farmconnect.app':'+91 98765 43210 or you@example.com'}"></div>
+    <div class="field"><label>Password</label><input id="lg-pass" type="password" placeholder="••••••••"></div>
+    <button class="btn btn-primary btn-full" id="lg-submit">Log In</button>
+    ${role!=='admin' ? `<button class="btn btn-outline btn-full" id="lg-otp" style="margin-top:10px;">Continue with OTP</button>` : ''}
+    <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:12.5px;">
+      <a href="#" id="lg-forgot" style="color:var(--ink-soft);">Forgot password?</a>
+      ${role!=='admin' ? `<a href="#" id="lg-register" style="color:var(--furrow-dark);font-weight:700;">${role==='owner'?'Register as Machinery Owner':role==='operator'?'Register as Operator':'Create Farmer Account'}</a>` : ''}
+    </div>
+    <div class="demo-box">
+      <b>Demo account</b> — password isn't checked in this demo.<br>
+      ${role==='admin' ? 'Any email/password logs in as Platform Admin.' : `Leave the name blank on registration, or just tap Log In to continue as <b>${demoUser.name}</b>.`}
+    </div>
+  `;
+  el.querySelector('#back-roles').onclick = ()=>nav('roleselect');
+  el.querySelector('#lg-submit').onclick = ()=>{
+    doLogin(role);
+  };
+  const otpBtn = el.querySelector('#lg-otp');
+  if(otpBtn) otpBtn.onclick = ()=>{
+    const contact = el.querySelector('#lg-contact').value.trim();
+    nav('otp', {role, purpose:'login', contact});
+  };
+  el.querySelector('#lg-forgot').onclick = (e)=>{ e.preventDefault(); toast('Password reset is a demo-only flow — no email is actually sent.'); };
+  const regLink = el.querySelector('#lg-register');
+  if(regLink) regLink.onclick = (e)=>{ e.preventDefault(); nav('register',{role}); };
+  return el;
+}
+
+/* ============================================================
+   PER-ROLE REGISTRATION
+   ============================================================ */
+const REGISTER_FIELDS = {
+  farmer: [['name','Full Name','text'],['mobile','Mobile Number','tel'],['email','Email','email'],['password','Password','password'],['confirm','Confirm Password','password'],['location','Location','text'],['farmLocation','Farm Location','text'],['farmType','Farm Type','text']],
+  owner: [['name','Full Name','text'],['mobile','Mobile','tel'],['email','Email','email'],['password','Password','password'],['confirm','Confirm Password','password'],['location','Location','text'],['business','Business / Owner Name','text']],
+  operator: [['name','Full Name','text'],['mobile','Mobile','tel'],['email','Email','email'],['password','Password','password'],['confirm','Confirm Password','password'],['location','Location','text'],['experience','Years of Experience','number'],['skills','Machine Skills','text'],['serviceArea','Service Area','text'],['rate','Expected Rate (₹/day)','number']],
+};
+function pageRegister(role){
+  const meta = ROLE_META[role] || ROLE_META.farmer;
+  const fields = REGISTER_FIELDS[role] || REGISTER_FIELDS.farmer;
+  const el = document.createElement('div');
+  el.className = 'auth-wrap';
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" id="back-login" style="margin-bottom:10px;">← Back to login</button>
+    <div style="text-align:center;margin-bottom:18px;">
+      <span style="font-size:30px;">${meta.icon}</span>
+      <h2 style="font-size:22px;margin-top:8px;">Create your ${meta.label} account</h2>
+    </div>
+    ${fields.map(([id,label,type])=>`<div class="field"><label>${label}</label><input id="rg-${id}" type="${type}" placeholder="${label}"></div>`).join('')}
+    <button class="btn btn-primary btn-full" id="rg-submit">Register</button>
+    <p style="text-align:center;font-size:12.5px;color:var(--ink-soft);margin-top:10px;">We'll send a one-time code to verify your number before your account is created.</p>
+  `;
+  el.querySelector('#back-login').onclick = ()=>nav('login',{role});
+  el.querySelector('#rg-submit').onclick = ()=>{
+    const name = el.querySelector('#rg-name').value.trim();
+    const pass = el.querySelector('#rg-password')?.value||'';
+    const confirm = el.querySelector('#rg-confirm')?.value||'';
+    if(!name){ toast('Please enter your full name.'); return; }
+    if(pass && pass!==confirm){ toast('Passwords do not match.'); return; }
+    nav('otp', {role, purpose:'register', name});
+  };
+  return el;
+}
+
+/* ============================================================
+   OTP VERIFICATION
+   ============================================================ */
+const DEMO_OTP = '123456';
+function pageOtp(params){
+  const role = params.role || 'farmer';
+  const purpose = params.purpose || 'login';
+  const meta = ROLE_META[role] || ROLE_META.farmer;
+  const el = document.createElement('div');
+  el.className = 'auth-wrap';
+  el.innerHTML = `
+    <div style="text-align:center;margin-bottom:8px;">
+      <span style="font-size:30px;">${meta.icon}</span>
+      <h2 style="font-size:21px;margin-top:8px;">Verify your mobile number</h2>
+      <p style="color:var(--ink-soft);font-size:13px;margin-top:4px;">Enter the 6-digit code sent to +91 XXXXX XXXXX</p>
+    </div>
+    <div id="otp-boxes" style="display:flex;justify-content:center;gap:8px;margin:20px 0 6px;">
+      ${[0,1,2,3,4,5].map(i=>`<input maxlength="1" inputmode="numeric" data-otp-box="${i}" style="width:42px;height:52px;text-align:center;font-size:20px;font-weight:700;">`).join('')}
+    </div>
+    <div id="otp-error" style="color:var(--rust);font-size:12.5px;text-align:center;min-height:16px;margin-bottom:6px;"></div>
+    <button class="btn btn-primary btn-full" id="otp-verify">Verify</button>
+    <div style="text-align:center;margin-top:14px;font-size:12.5px;color:var(--ink-soft);" id="otp-resend-wrap">
+      Resend code in <span id="otp-timer" class="mono">30s</span>
+    </div>
+    <div class="demo-box" style="text-align:center;">
+      <b>DEMO OTP: ${DEMO_OTP}</b><br>No real SMS is sent — this is a demo environment.
+    </div>
+  `;
+  const boxes = [...el.querySelectorAll('[data-otp-box]')];
+  boxes[0].focus();
+  boxes.forEach((box,i)=>{
+    box.addEventListener('input', ()=>{
+      box.value = box.value.replace(/[^0-9]/g,'').slice(0,1);
+      if(box.value && i<5) boxes[i+1].focus();
+    });
+    box.addEventListener('keydown', (e)=>{
+      if(e.key==='Backspace' && !box.value && i>0){ boxes[i-1].focus(); }
+    });
+    box.addEventListener('paste', (e)=>{
+      e.preventDefault();
+      const paste = (e.clipboardData.getData('text')||'').replace(/[^0-9]/g,'').slice(0,6);
+      paste.split('').forEach((ch,idx)=>{ if(boxes[idx]) boxes[idx].value = ch; });
+      if(paste.length) boxes[Math.min(paste.length,6)-1].focus();
+    });
+  });
+
+  let seconds = 30;
+  const timerEl = el.querySelector('#otp-timer');
+  const resendWrap = el.querySelector('#otp-resend-wrap');
+  const timerInt = setInterval(()=>{
+    seconds--;
+    if(seconds<=0){
+      clearInterval(timerInt);
+      resendWrap.innerHTML = `<a href="#" id="otp-resend" style="color:var(--furrow-dark);font-weight:700;">Resend code</a>`;
+      resendWrap.querySelector('#otp-resend').onclick = (e)=>{
+        e.preventDefault();
+        toast('Demo OTP resent: ' + DEMO_OTP);
+        nav('otp', params); // re-render with a fresh timer
+      };
+    } else {
+      timerEl.textContent = seconds+'s';
+    }
+  }, 1000);
+
+  el.querySelector('#otp-verify').onclick = ()=>{
+    const code = boxes.map(b=>b.value).join('');
+    const errEl = el.querySelector('#otp-error');
+    if(code.length<6){ errEl.textContent = 'Please enter all 6 digits.'; return; }
+    if(code !== DEMO_OTP){
+      errEl.textContent = 'Incorrect code. Please try again (demo code is '+DEMO_OTP+').';
+      boxes.forEach(b=>b.value='');
+      boxes[0].focus();
+      return;
+    }
+    clearInterval(timerInt);
+    toast('Mobile number verified');
+    if(purpose==='register') doLogin(role, params.name);
+    else doLogin(role);
+  };
+  return el;
+}
+
+function doLogin(role, name){
+
+  if(role==='admin'){
+    SESSION = {userId:'admin_1', role:'admin', name:'Platform Admin'};
+  } else if(role==='farmer'){
+    const u = name ? {id:uid('frm'), name} : DB.farmers[0];
+    if(name && !DB.farmers.find(f=>f.id===u.id)) DB.farmers.push({...u, location: LOCATIONS[0], farmSize: 5, crops:['Rice']});
+    SESSION = {userId:u.id, role:'farmer', name:u.name};
+  } else if(role==='owner'){
+    const u = name ? {id:uid('own'), name} : DB.owners[0];
+    if(name && !DB.owners.find(o=>o.id===u.id)) DB.owners.push({...u, location: LOCATIONS[0], verified:false, rating:'0.0'});
+    SESSION = {userId:u.id, role:'owner', name:u.name};
+  } else if(role==='operator'){
+    const u = name ? {id:uid('opr'), name} : DB.operators[0];
+    if(name && !DB.operators.find(o=>o.id===u.id)) DB.operators.push({...u, location: LOCATIONS[0], verified:false, rating:'0.0', experience:1, expertise:[], serviceRadius:20, pricePerDay:500});
+    SESSION = {userId:u.id, role:'operator', name:u.name};
+  }
+  saveDB();
+  toast(`Welcome, ${SESSION.name.split(' ')[0]}`);
+  nav('dashboard');
+}
+
+/* ============================================================
+   SEARCH / BROWSE PAGE
+   ============================================================ */
+function pageSearch(){
+  const el = document.createElement('div');
+  el.className = 'container';
+  el.style.padding = '28px 20px 60px';
+
+  let results = DB.machines.filter(m=>{
+    if(FILTERS.category && m.categoryId!==FILTERS.category) return false;
+    if(FILTERS.q){
+      const q = FILTERS.q.toLowerCase();
+      if(!(m.name.toLowerCase().includes(q) || m.brand.toLowerCase().includes(q))) return false;
+    }
+    if(FILTERS.maxPrice && m.pricePerDay > Number(FILTERS.maxPrice)) return false;
+    if(FILTERS.operatorOnly && !m.operatorAvailable) return false;
+    return true;
+  });
+  if(FILTERS.sort==='price_low') results.sort((a,b)=>a.pricePerDay-b.pricePerDay);
+  else if(FILTERS.sort==='price_high') results.sort((a,b)=>b.pricePerDay-a.pricePerDay);
+  else if(FILTERS.sort==='rating') results.sort((a,b)=>b.rating-a.rating);
+  else if(FILTERS.sort==='most_rented') results.sort((a,b)=>b.numRentals-a.numRentals);
+
+  el.innerHTML = `
+    <div class="section-head">
+      <div><div class="eyebrow">Marketplace</div><h2>Browse machinery</h2></div>
+      <button class="btn btn-outline" id="tell-us">Tell us what you need →</button>
+    </div>
+    <div class="search-layout">
+      <div class="filter-box">
+        <h5>Search</h5>
+        <div class="field"><input id="f-q" placeholder="Search machines..." value="${FILTERS.q||''}"></div>
+        <h5>Category</h5>
+        <div class="chip-row">
+          <button class="chip ${!FILTERS.category?'active':''}" data-cat="">All</button>
+          ${CATEGORIES.map(c=>`<button class="chip ${FILTERS.category===c.id?'active':''}" data-cat="${c.id}">${c.name}</button>`).join('')}
+        </div>
+        <h5>Max price / day</h5>
+        <div class="field"><input id="f-price" type="number" placeholder="e.g. 1500" value="${FILTERS.maxPrice||''}"></div>
+        <h5>Options</h5>
+        <div class="field" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="f-operator" style="width:auto;" ${FILTERS.operatorOnly?'checked':''}>
+          <label style="margin:0;text-transform:none;font-weight:600;color:var(--ink);">Operator available</label>
+        </div>
+        <button class="btn btn-outline btn-full" id="f-clear">Clear filters</button>
+      </div>
+      <div>
+        <div class="results-bar">
+          <span style="font-size:13.5px;color:var(--ink-soft);">${results.length} machine${results.length!==1?'s':''} found</span>
+          <select id="f-sort" style="width:auto;">
+            <option value="newest" ${FILTERS.sort==='newest'?'selected':''}>Newest</option>
+            <option value="price_low" ${FILTERS.sort==='price_low'?'selected':''}>Price: Low to High</option>
+            <option value="price_high" ${FILTERS.sort==='price_high'?'selected':''}>Price: High to Low</option>
+            <option value="rating" ${FILTERS.sort==='rating'?'selected':''}>Highest Rated</option>
+            <option value="most_rented" ${FILTERS.sort==='most_rented'?'selected':''}>Most Rented</option>
+          </select>
+        </div>
+        ${results.length ? `<div class="machine-grid">${results.map(m=>machineCardHTML(m,{compare:true})).join('')}</div>` : `
+          <div class="empty-state">
+            <div class="glyph">🌾</div>
+            <h4>No machinery found</h4>
+            <p>Try widening your filters or searching a different category.</p>
+          </div>`}
+      </div>
+    </div>
+    ${compareBar()}
+  `;
+
+  el.querySelector('#f-q').oninput = (e)=>{FILTERS.q=e.target.value; render();};
+  el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{FILTERS.category=c.dataset.cat; render();});
+  el.querySelector('#f-price').oninput = (e)=>{FILTERS.maxPrice=e.target.value; render();};
+  el.querySelector('#f-operator').onchange = (e)=>{FILTERS.operatorOnly=e.target.checked; render();};
+  el.querySelector('#f-sort').onchange = (e)=>{FILTERS.sort=e.target.value; render();};
+  el.querySelector('#f-clear').onclick = ()=>{FILTERS={q:'',category:'',maxPrice:'',sort:'newest',operatorOnly:false}; render();};
+  el.querySelector('#tell-us').onclick = ()=>openRequirementModal();
+  el.querySelectorAll('.m-card').forEach(c=>c.onclick=()=>nav('machine',{id:c.dataset.id}));
+  attachFavHandlers(el);
+  attachCompareHandlers(el);
+  return el;
+}
+
+/* ============================================================
+   OPERATORS PAGE
+   ============================================================ */
+function pageOperators(){
+  const el = document.createElement('div');
+  el.className='container'; el.style.padding='28px 20px 60px';
+  el.innerHTML = `
+    <div class="section-head"><div><div class="eyebrow">Operator marketplace</div><h2>Find a skilled operator</h2></div></div>
+    <div class="machine-grid">
+      ${DB.operators.map(o=>`
+        <div class="m-card">
+          <div class="m-media">🧑‍🌾</div>
+          <div class="m-body">
+            <div class="m-title">${o.name}</div>
+            <div class="m-meta">${o.verified?'<span class="badge badge-verified">✓ Verified</span>':'<span class="badge badge-pending">Pending</span>'} <span class="rating">★ ${o.rating}</span></div>
+            <div class="m-meta">📍 ${o.location.district} · ${o.serviceRadius}km radius</div>
+            <div class="m-meta">Expertise: ${o.expertise.join(', ')||'General'}</div>
+            <div class="m-meta">${o.experience} yrs experience</div>
+            <div class="m-price"><div><b>${money(o.pricePerDay)}</b><br><span>per day</span></div></div>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+  return el;
+}
+
+/* ============================================================
+   MACHINE DETAIL PAGE
+   ============================================================ */
+function pageMachineDetail(){
+  const el = document.createElement('div');
+  el.className='container'; el.style.padding='28px 20px 60px';
+  const m = getMachine(ROUTE.params.id);
+  if(!m){ el.innerHTML = `<div class="empty-state"><h4>Machine not found</h4></div>`; return el; }
+  const owner = getOwner(m.ownerId);
+  const cat = getCategory(m.categoryId);
+  const reviews = machineRatingReviews(m.id);
+
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" id="back-btn" style="margin-bottom:14px;">← Back to results</button>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:26px;align-items:start;">
+      <div>
+        <div class="m-media" style="height:220px;border-radius:12px;font-size:70px;">${m.emoji}</div>
+        <div style="margin-top:18px;">
+          <div class="m-cat">${cat.name}</div>
+          <h2 style="font-size:26px;margin:4px 0 8px;">${m.name}</h2>
+          <div class="m-meta" style="font-size:13.5px;">
+            ${m.verification==='VERIFIED'?'<span class="badge badge-verified">✓ Verified Machinery</span>':'<span class="badge badge-pending">Verification Pending</span>'}
+            <span class="rating">★ ${m.rating} (${reviews.length} reviews)</span>
+            <span>· ${m.numRentals} rentals</span>
+          </div>
+          <p style="color:var(--ink-soft);margin-top:14px;line-height:1.6;font-size:14.5px;">${m.description}</p>
+
+          <div class="grid-2" style="margin-top:18px;grid-template-columns:repeat(3,1fr);">
+            <div class="card" style="padding:12px;"><label style="margin:0;">Brand</label><b>${m.brand}</b></div>
+            <div class="card" style="padding:12px;"><label style="margin:0;">Model</label><b>${m.model}</b></div>
+            <div class="card" style="padding:12px;"><label style="margin:0;">Year</label><b>${m.year}</b></div>
+            <div class="card" style="padding:12px;"><label style="margin:0;">Horsepower</label><b>${m.horsepower} HP</b></div>
+            <div class="card" style="padding:12px;"><label style="margin:0;">Fuel</label><b>${m.fuelType}</b></div>
+            <div class="card" style="padding:12px;"><label style="margin:0;">Condition</label><b>${m.condition}</b></div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <label style="margin-bottom:8px;">Features</label>
+            <div class="chip-row">${m.features.map(f=>`<span class="chip">${f}</span>`).join('')}</div>
+          </div>
+
+          <div style="margin-top:22px;">
+            <label style="margin-bottom:8px;">Listed by</label>
+            <div class="card" style="padding:14px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <b>${owner.name}</b> ${owner.verified?'<span class="badge badge-verified" style="margin-left:6px;">✓ Verified Owner</span>':''}
+                <div style="font-size:12.5px;color:var(--ink-soft);margin-top:4px;">📍 ${owner.location.district}, ${owner.location.state} · ★ ${owner.rating} rating</div>
+              </div>
+              <button class="btn btn-outline btn-sm" id="msg-owner">Message owner</button>
+            </div>
+          </div>
+
+          <div style="margin-top:26px;">
+            <label style="margin-bottom:8px;">Reviews (${reviews.length})</label>
+            <div class="card" style="padding:4px 16px;">
+              ${reviews.length ? reviews.slice(0,5).map(r=>`
+                <div class="rev">
+                  <div class="rev-top"><span>${getFarmer(r.farmerId)?.name||'Farmer'}</span><span>★ ${r.rating}</span></div>
+                  <p>${r.comment}</p>
+                </div>`).join('') : `<div class="empty-state" style="padding:24px;"><p>No reviews yet for this machine.</p></div>`}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:sticky;top:80px;">
+        <div class="card" style="padding:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <div><b style="font-family:'IBM Plex Mono',monospace;font-size:22px;">${money(m.pricePerDay)}</b><span style="color:var(--ink-soft);font-size:12.5px;"> /day</span></div>
+            <button class="fav" data-fav="${m.id}" style="width:34px;height:34px;border-radius:50%;background:var(--husk-2);border:none;">${FAVORITES.has(m.id)?'❤️':'🤍'}</button>
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${money(m.pricePerHour)}/hr · ${money(m.pricePerWeek)}/week · Deposit ${money(m.deposit)}</div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0;">
+          <div class="field"><label>Start date</label><input type="date" id="bk-date" min="2026-08-11"></div>
+          <div class="field"><label>Duration (days)</label><input type="number" id="bk-days" value="1" min="1" max="14"></div>
+          <div class="field" style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="bk-operator" style="width:auto;" ${m.operatorAvailable?'':'disabled'}>
+            <label style="margin:0;text-transform:none;font-weight:600;color:var(--ink);">Add operator ${m.operatorAvailable?'(₹500/day)':'(not available)'}</label>
+          </div>
+          <div class="field" style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="bk-transport" style="width:auto;">
+            <label style="margin:0;text-transform:none;font-weight:600;color:var(--ink);">Include transport</label>
+          </div>
+
+          <div id="price-plate"></div>
+
+          <button class="btn btn-primary btn-full" id="bk-submit" style="margin-top:14px;">Request booking</button>
+          <p style="font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:8px;">You won't be charged until the owner confirms.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  el.querySelector('#back-btn').onclick = ()=>nav('search');
+  attachFavHandlers(el);
+  el.querySelector('#msg-owner').onclick = ()=>{
+    if(!SESSION){ toast('Log in to message an owner.'); nav('login',{role:'farmer'}); return; }
+    if(SESSION.userId===owner.id){ toast("That's your own listing."); return; }
+    openConversation({userA:SESSION.userId, userB:owner.id, machineId:m.id});
+  };
+
+  function recalc(){
+    const days = Math.max(1, Number(el.querySelector('#bk-days').value||1));
+    const withOp = el.querySelector('#bk-operator').checked;
+    const withTransport = el.querySelector('#bk-transport').checked;
+    const subtotal = m.pricePerDay*days;
+    const operatorCost = withOp ? 500*days : 0;
+    const transport = withTransport ? Math.round(m.serviceRadius*8) : 0;
+    const discount = days>=3 ? Math.round(subtotal*0.05) : 0;
+    const {platformFee, total, rate} = calculatePricing({subtotal, operatorCost, transport, discount});
+    el.querySelector('#price-plate').innerHTML = `
+      <div class="plate" style="margin-top:14px;">
+        <div class="plate-rivets"><span></span><span></span><span></span><span></span></div>
+        <div class="plate-row"><span class="plate-label">Base rental (${days}d)</span><span>${money(subtotal)}</span></div>
+        ${operatorCost?`<div class="plate-row"><span class="plate-label">Operator</span><span>${money(operatorCost)}</span></div>`:''}
+        ${transport?`<div class="plate-row"><span class="plate-label">Transport</span><span>${money(transport)}</span></div>`:''}
+        <div class="plate-row" title="Platform fee helps operate FarmConnect, payments, support and marketplace infrastructure."><span class="plate-label">FarmConnect platform fee — ${pctLabel(rate)} ⓘ</span><span>${money(platformFee)}</span></div>
+        ${discount?`<div class="plate-row"><span class="plate-label">Discount</span><span>-${money(discount)}</span></div>`:''}
+        <div class="plate-row total"><span class="plate-label" style="color:var(--harvest);">Total</span><span>${money(total)}</span></div>
+      </div>`;
+    return {subtotal, operatorCost, transport, platformFee, discount, total, days, withOp, rate};
+  }
+  let pricing = recalc();
+  ['#bk-days','#bk-operator','#bk-transport'].forEach(sel=>{
+    el.querySelector(sel).addEventListener('input', ()=>pricing=recalc());
+    el.querySelector(sel).addEventListener('change', ()=>pricing=recalc());
+  });
+
+  el.querySelector('#bk-submit').onclick = ()=>{
+    if(!SESSION){ toast('Please log in as a farmer to book.'); nav('login',{role:'farmer'}); return; }
+    if(SESSION.role!=='farmer'){ toast('Only farmer accounts can request bookings.'); return; }
+    const date = el.querySelector('#bk-date').value;
+    if(!date){ toast('Please choose a start date.'); return; }
+    pricing = recalc();
+    const booking = {
+      id: uid('bkg'), machineId:m.id, farmerId:SESSION.userId, ownerId:m.ownerId,
+      operatorId: pricing.withOp ? (DB.operators.find(o=>o.expertise.includes(cat.name))||DB.operators[0]).id : null,
+      startDate:date, days:pricing.days, withOperator:pricing.withOp, status:'PENDING', paymentStatus:'PENDING',
+      pricing:{subtotal:pricing.subtotal,operatorCost:pricing.operatorCost,transport:pricing.transport,platformFee:pricing.platformFee,discount:pricing.discount,total:pricing.total,rate:pricing.rate},
+      createdAt:new Date().toISOString(), reviewed:false,
+    };
+    DB.bookings.push(booking);
+    DB.notifications.push({id:uid('ntf'), userId:m.ownerId, title:'New booking request', body:`${SESSION.name} requested ${m.name} from ${fmtDate(date)}.`, read:false, createdAt:new Date().toISOString()});
+    saveDB();
+    toast('Booking request sent to the owner.');
+    nav('dashboard');
+  };
+
+  return el;
+}
+
+/* ============================================================
+   NOTIFICATIONS PAGE
+   ============================================================ */
+function pageNotifications(){
+  const el = document.createElement('div');
+  el.className='container'; el.style.padding='28px 20px 60px;max-width:640px';
+  el.style.maxWidth='640px';
+  const mine = SESSION ? DB.notifications.filter(n=>n.userId===SESSION.userId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)) : [];
+  el.innerHTML = `
+    <div class="section-head"><h2>Notifications</h2>${mine.length?`<button class="btn btn-outline btn-sm" id="mark-all">Mark all read</button>`:''}</div>
+    <div class="card" style="padding:0;">
+      ${mine.length ? mine.map(n=>`
+        <div class="notif-item ${n.read?'read':''}">
+          <div class="dot"></div>
+          <div><b>${n.title}</b><span>${n.body}</span></div>
+        </div>`).join('') : `<div class="empty-state"><div class="glyph">🔔</div><h4>No notifications</h4><p>You're all caught up.</p></div>`}
+    </div>
+  `;
+  const markAll = el.querySelector('#mark-all');
+  if(markAll) markAll.onclick = ()=>{ mine.forEach(n=>n.read=true); saveDB(); render(); };
+  return el;
+}
+
+/* ============================================================
+   DASHBOARD ROUTER (role based)
+   ============================================================ */
+function pageDashboard(){
+  const el = document.createElement('div');
+  if(!SESSION){
+    el.innerHTML = `<div class="empty-state" style="padding:80px 20px;"><h4>Please log in</h4><p>Log in to view your dashboard.</p></div>`;
+    setTimeout(()=>nav('roleselect'), 400);
+    return el;
+  }
+  const dash = document.createElement('div');
+  dash.className = 'dash';
+  dash.appendChild(renderSidebar());
+  const mainWrap = document.createElement('div');
+  mainWrap.className = 'dash-main';
+  const tab = ROUTE.params.tab || 'overview';
+  if(SESSION.role==='farmer') mainWrap.appendChild(farmerDashboard(tab));
+  else if(SESSION.role==='owner') mainWrap.appendChild(ownerDashboard(tab));
+  else if(SESSION.role==='operator') mainWrap.appendChild(operatorDashboard(tab));
+  else if(SESSION.role==='admin') mainWrap.appendChild(adminDashboard(tab));
+  dash.appendChild(mainWrap);
+  el.appendChild(dash);
+  return el;
+}
+
+function sidebarLinksFor(role){
+  if(role==='farmer') return [['overview','📊','Overview'],['bookings','📅','My Bookings'],['favorites','❤️','Favorites'],['messages','💬','Messages'],['browse','🔍','Browse Machinery']];
+  if(role==='owner') return [['overview','📊','Overview'],['listings','🚜','My Machinery'],['requests','📥','Booking Requests'],['messages','💬','Messages'],['earnings','💰','Earnings'],['maintenance','🔧','Maintenance']];
+  if(role==='operator') return [['overview','📊','Overview'],['jobs','🧰','Assigned Jobs'],['requests','📥','Work Requests'],['messages','💬','Messages']];
+  if(role==='admin') return [['overview','📊','Overview'],['users','👥','Users'],['listings','🚜','Machinery'],['bookings','📅','Bookings'],['revenue','💵','Platform Revenue'],['disputes','⚖️','Disputes'],['automations','🤖','Automations'],['settings','⚙️','Platform Fee']];
+  return [];
+}
+
+function renderSidebar(){
+  const side = document.createElement('div');
+  side.className = 'sidebar';
+  const links = sidebarLinksFor(SESSION.role);
+  const activeTab = ROUTE.params.tab || 'overview';
+  side.innerHTML = `
+    <div class="side-role">${SESSION.role} panel</div>
+    ${links.map(([id,icon,label])=>`<a href="#" class="side-link ${activeTab===id?'active':''}" data-tab="${id}">${icon} ${label}</a>`).join('')}
+  `;
+  side.querySelectorAll('.side-link').forEach(l=>l.onclick=(e)=>{e.preventDefault(); nav('dashboard',{tab:l.dataset.tab});});
+  return side;
+}
+
+/* ---------------- FARMER DASHBOARD ---------------- */
+function farmerDashboard(tab){
+  const el = document.createElement('div');
+  const myBookings = DB.bookings.filter(b=>b.farmerId===SESSION.userId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const active = myBookings.filter(b=>['PENDING','CONFIRMED','ONGOING'].includes(b.status));
+  const spend = myBookings.filter(b=>b.status==='COMPLETED').reduce((s,b)=>s+b.pricing.total,0);
+
+  if(tab==='browse'){ nav('search'); return el; }
+
+  if(tab==='messages'){ messagesPane(el, ROUTE.params.conv); return el; }
+
+  if(tab==='favorites'){
+    const favs = DB.machines.filter(m=>FAVORITES.has(m.id));
+    el.innerHTML = `<div class="dash-head"><h2>Favorites</h2></div>`;
+    const grid = document.createElement('div');
+    grid.className='machine-grid';
+    grid.innerHTML = favs.length ? favs.map(machineCardHTML).join('') : '';
+    el.appendChild(grid);
+    if(!favs.length){
+      el.innerHTML += `<div class="empty-state"><div class="glyph">🤍</div><h4>No favorites yet</h4><p>Tap the heart on any machine to save it here.</p></div>`;
+    }
+    grid.querySelectorAll('.m-card').forEach(c=>c.onclick=()=>nav('machine',{id:c.dataset.id}));
+    attachFavHandlers(grid);
+    return el;
+  }
+
+  if(tab==='bookings'){
+    el.innerHTML = `<div class="dash-head"><h2>My Bookings</h2></div>` + bookingsTableHTML(myBookings, 'farmer');
+    attachBookingActions(el, 'farmer');
+    return el;
+  }
+
+  // overview
+  el.innerHTML = `
+    <div class="dash-head"><h2>Welcome back, ${SESSION.name.split(' ')[0]}</h2><button class="btn btn-primary" id="go-browse">Find machinery →</button></div>
+    <div class="kpi-grid">
+      <div class="kpi"><span>Active bookings</span><b>${active.length}</b></div>
+      <div class="kpi"><span>Total rentals</span><b>${myBookings.filter(b=>b.status==='COMPLETED').length}</b></div>
+      <div class="kpi"><span>Total spent</span><b>${money(spend)}</b></div>
+      <div class="kpi"><span>Saved machines</span><b>${FAVORITES.size}</b></div>
+    </div>
+    <div class="section-head"><h2 style="font-size:18px;">Recent activity</h2></div>
+    ${bookingsTableHTML(myBookings.slice(0,6), 'farmer')}
+    <div class="section-head" style="margin-top:30px;"><h2 style="font-size:18px;">Recommended for you</h2></div>
+    <div class="machine-grid">${[...DB.machines].sort((a,b)=>b.rating-a.rating).slice(0,3).map(machineCardHTML).join('')}</div>
+  `;
+  el.querySelector('#go-browse').onclick = ()=>nav('search');
+  el.querySelectorAll('.m-card').forEach(c=>c.onclick=()=>nav('machine',{id:c.dataset.id}));
+  attachFavHandlers(el);
+  attachBookingActions(el, 'farmer');
+  return el;
+}
+
+function bookingsTableHTML(bookings, viewer){
+  if(!bookings.length) return `<div class="empty-state"><div class="glyph">📅</div><h4>No bookings yet</h4><p>Bookings you make or receive will show up here.</p></div>`;
+  return `<div class="table-wrap"><table>
+    <thead><tr><th>Machine</th>${viewer!=='farmer'?'<th>Farmer</th>':''}<th>Start date</th><th>Days</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${bookings.map(b=>{
+        const m = getMachine(b.machineId);
+        const canRespond = viewer==='owner' && b.status==='PENDING';
+        const canComplete = viewer==='owner' && b.status==='CONFIRMED';
+        const canCancel = viewer==='farmer' && ['PENDING','CONFIRMED'].includes(b.status);
+        const canReview = viewer==='farmer' && b.status==='COMPLETED' && !b.reviewed;
+        const canDispute = (viewer==='farmer'||viewer==='owner') && ['CONFIRMED','ONGOING','COMPLETED'].includes(b.status) && !DB.disputes.find(d=>d.bookingId===b.id);
+        const canInvoice = b.status!=='PENDING';
+        const payClass = b.paymentStatus==='PAID'?'badge-verified':b.paymentStatus==='FAILED'?'badge-rejected':b.paymentStatus==='REFUNDED'?'badge-neutral':'badge-pending';
+        return `<tr>
+          <td>${m?m.name:'—'}</td>
+          ${viewer!=='farmer'?`<td>${getFarmer(b.farmerId)?.name||'—'}</td>`:''}
+          <td>${fmtDate(b.startDate)}</td>
+          <td>${b.days}</td>
+          <td class="mono">${money(b.pricing.total)}</td>
+          <td><span class="badge ${payClass}">${b.paymentStatus||'PENDING'}</span></td>
+          <td><span class="status ${b.status}">${b.status}</span></td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${canRespond?`<button class="btn btn-sm btn-primary" data-accept="${b.id}">Accept</button><button class="btn btn-sm btn-outline" data-reject="${b.id}">Reject</button>`:''}
+            ${canComplete?`<button class="btn btn-sm btn-primary" data-complete="${b.id}">Mark complete</button>`:''}
+            ${canCancel?`<button class="btn btn-sm btn-outline" data-cancel="${b.id}">Cancel</button>`:''}
+            ${canReview?`<button class="btn btn-sm btn-dark" data-review="${b.id}">Review</button>`:''}
+            ${canDispute?`<button class="btn btn-sm btn-ghost" data-dispute="${b.id}" style="color:var(--rust);">Report issue</button>`:''}
+            ${canInvoice?`<button class="btn btn-sm btn-ghost" data-invoice="${b.id}">Invoice</button>`:''}
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function attachBookingActions(root, viewer){
+  root.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>{
+    const bk = DB.bookings.find(x=>x.id===b.dataset.accept);
+    bk.status='CONFIRMED';
+    bk.paymentStatus='PAID';
+    DB.notifications.push({id:uid('ntf'), userId:bk.farmerId, title:'Booking confirmed', body:'Your booking request was accepted.', read:false, createdAt:new Date().toISOString()});
+    saveDB(); toast('Booking confirmed — payment marked paid'); render();
+  });
+  root.querySelectorAll('[data-reject]').forEach(b=>b.onclick=()=>{
+    const bk = DB.bookings.find(x=>x.id===b.dataset.reject);
+    bk.status='REJECTED';
+    bk.paymentStatus='FAILED';
+    DB.notifications.push({id:uid('ntf'), userId:bk.farmerId, title:'Booking declined', body:'The owner declined your booking request.', read:false, createdAt:new Date().toISOString()});
+    saveDB(); toast('Booking rejected'); render();
+  });
+  root.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=()=>{
+    const bk = DB.bookings.find(x=>x.id===b.dataset.cancel);
+    const wasPaid = bk.paymentStatus==='PAID';
+    bk.status='CANCELLED';
+    bk.paymentStatus = wasPaid ? 'REFUNDED' : 'FAILED';
+    saveDB(); toast(wasPaid?'Booking cancelled — refund issued':'Booking cancelled'); render();
+  });
+  root.querySelectorAll('[data-complete]').forEach(b=>b.onclick=()=>{
+    const bk = DB.bookings.find(x=>x.id===b.dataset.complete);
+    bk.status='COMPLETED';
+    const m = getMachine(bk.machineId);
+    if(m) m.numRentals = (m.numRentals||0)+1;
+    DB.notifications.push({id:uid('ntf'), userId:bk.farmerId, title:'Rental completed', body:'Your rental is complete — leave a review when ready.', read:false, createdAt:new Date().toISOString()});
+    saveDB(); toast('Marked as completed'); render();
+  });
+  root.querySelectorAll('[data-review]').forEach(b=>b.onclick=()=>{
+    openReviewModal(b.dataset.review);
+  });
+  root.querySelectorAll('[data-dispute]').forEach(b=>b.onclick=()=>{
+    openDisputeModal(b.dataset.dispute);
+  });
+  root.querySelectorAll('[data-invoice]').forEach(b=>b.onclick=()=>{
+    openInvoiceModal(b.dataset.invoice);
+  });
+}
+
+function openInvoiceModal(bookingId){
+  const bk = DB.bookings.find(b=>b.id===bookingId);
+  const m = getMachine(bk.machineId);
+  const farmer = getFarmer(bk.farmerId);
+  const owner = getOwner(bk.ownerId);
+  const p = bk.pricing;
+  const payClass = bk.paymentStatus==='PAID'?'badge-verified':bk.paymentStatus==='FAILED'?'badge-rejected':bk.paymentStatus==='REFUNDED'?'badge-neutral':'badge-pending';
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="inv-close">✕</button>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+        <div><h3 style="font-size:19px;">Invoice</h3><span style="font-size:12px;color:var(--ink-soft);">Booking ${bk.id}</span></div>
+        <span class="badge ${payClass}">${bk.paymentStatus}</span>
+      </div>
+      <div class="grid-2" style="font-size:13px;margin-bottom:16px;">
+        <div><label style="margin-bottom:2px;">Farmer</label>${farmer?farmer.name:'—'}</div>
+        <div><label style="margin-bottom:2px;">Owner</label>${owner?owner.name:'—'}</div>
+        <div><label style="margin-bottom:2px;">Machine</label>${m?m.name:'—'}</div>
+        <div><label style="margin-bottom:2px;">Rental period</label>${fmtDate(bk.startDate)} · ${bk.days} day${bk.days>1?'s':''}</div>
+      </div>
+      <div class="plate">
+        <div class="plate-rivets"><span></span><span></span><span></span><span></span></div>
+        <div class="plate-row"><span class="plate-label">Subtotal</span><span>${money(p.subtotal)}</span></div>
+        ${p.operatorCost?`<div class="plate-row"><span class="plate-label">Operator fee</span><span>${money(p.operatorCost)}</span></div>`:''}
+        ${p.transport?`<div class="plate-row"><span class="plate-label">Transport</span><span>${money(p.transport)}</span></div>`:''}
+        <div class="plate-row"><span class="plate-label">Platform fee (${pctLabel(typeof p.rate==='number'?p.rate:DEFAULT_PLATFORM_FEE_RATE)})</span><span>${money(p.platformFee)}</span></div>
+        ${p.discount?`<div class="plate-row"><span class="plate-label">Discount</span><span>-${money(p.discount)}</span></div>`:''}
+        <div class="plate-row"><span class="plate-label">Tax</span><span>—</span></div>
+        <div class="plate-row total"><span class="plate-label" style="color:var(--harvest);">Total</span><span>${money(p.total)}</span></div>
+      </div>
+      <p style="font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:12px;">Mock invoice for demo purposes — no real payment was processed.</p>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#inv-close').onclick = ()=>bg.remove();
+  bg.onclick = (e)=>{ if(e.target===bg) bg.remove(); };
+}
+
+function openReviewModal(bookingId){
+  const bk = DB.bookings.find(x=>x.id===bookingId);
+  const m = getMachine(bk.machineId);
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="rv-close">✕</button>
+      <h3 style="font-size:19px;margin-bottom:4px;">Review ${m.name}</h3>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">Rate your experience — this helps other farmers.</p>
+      <div class="field"><label>Rating</label>
+        <div id="rv-stars" style="font-size:24px;letter-spacing:6px;">${'☆☆☆☆☆'}</div>
+      </div>
+      <div class="field"><label>Comment</label><textarea id="rv-comment" rows="3" placeholder="How did it go?"></textarea></div>
+      <button class="btn btn-primary btn-full" id="rv-submit">Submit review</button>
+    </div>`;
+  document.body.appendChild(bg);
+  let rating = 5;
+  const starsEl = bg.querySelector('#rv-stars');
+  function paintStars(){ starsEl.textContent = '★★★★★'.slice(0,rating)+'☆☆☆☆☆'.slice(0,5-rating); }
+  paintStars();
+  starsEl.onclick = (e)=>{
+    const rect = starsEl.getBoundingClientRect();
+    const pct = (e.clientX-rect.left)/rect.width;
+    rating = Math.max(1, Math.min(5, Math.ceil(pct*5)));
+    paintStars();
+  };
+  bg.querySelector('#rv-close').onclick = ()=>bg.remove();
+  bg.onclick = (e)=>{ if(e.target===bg) bg.remove(); };
+  bg.querySelector('#rv-submit').onclick = ()=>{
+    DB.reviews.push({id:uid('rev'), machineId:m.id, farmerId:SESSION.userId, ownerId:m.ownerId, rating, comment: bg.querySelector('#rv-comment').value||'No comment.', createdAt:new Date().toISOString(), bookingId:bk.id});
+    bk.reviewed = true;
+    const allR = machineRatingReviews(m.id);
+    m.rating = (allR.reduce((s,r)=>s+r.rating,0)/allR.length).toFixed(1);
+    saveDB();
+    bg.remove();
+    toast('Review submitted — thank you!');
+    render();
+  };
+}
+
+/* ---------------- OWNER DASHBOARD ---------------- */
+function ownerDashboard(tab){
+  const el = document.createElement('div');
+  const myMachines = DB.machines.filter(m=>m.ownerId===SESSION.userId);
+  const myBookings = DB.bookings.filter(b=>b.ownerId===SESSION.userId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const earnings = myBookings.filter(b=>b.status==='COMPLETED').reduce((s,b)=>s+b.pricing.subtotal,0);
+  const pending = myBookings.filter(b=>b.status==='PENDING');
+
+  if(tab==='listings'){
+    el.innerHTML = `<div class="dash-head"><h2>My Machinery</h2><button class="btn btn-primary" id="add-machine">+ Add machine</button></div>`;
+    if(myMachines.length){
+      const wrap = document.createElement('div');
+      wrap.className='table-wrap';
+      wrap.innerHTML = `<table><thead><tr><th>Machine</th><th>Price/day</th><th>Status</th><th>Verification</th><th>Rating</th><th>Rentals</th></tr></thead>
+        <tbody>${myMachines.map(m=>`<tr>
+          <td>${m.emoji} ${m.name}</td><td class="mono">${money(m.pricePerDay)}</td>
+          <td><span class="status ${m.status}">${m.status}</span></td>
+          <td>${m.verification==='VERIFIED'?'<span class="badge badge-verified">✓ Verified</span>':'<span class="badge badge-pending">Pending</span>'}</td>
+          <td>★ ${m.rating}</td><td>${m.numRentals}</td>
+        </tr>`).join('')}</tbody></table>`;
+      el.appendChild(wrap);
+    } else {
+      el.innerHTML += `<div class="empty-state"><div class="glyph">🚜</div><h4>No machinery listed</h4><p>Add your first machine to start receiving bookings.</p></div>`;
+    }
+    const addBtn = el.querySelector('#add-machine');
+    if(addBtn) addBtn.onclick = ()=>openAddMachineModal();
+    return el;
+  }
+
+  if(tab==='requests'){
+    el.innerHTML = `<div class="dash-head"><h2>Booking Requests</h2></div>` + bookingsTableHTML(myBookings, 'owner');
+    attachBookingActions(el, 'owner');
+    return el;
+  }
+
+  if(tab==='messages'){ messagesPane(el, ROUTE.params.conv); return el; }
+
+  if(tab==='earnings'){
+    const monthly = {};
+    myBookings.filter(b=>b.status==='COMPLETED').forEach(b=>{
+      const mo = b.startDate.slice(0,7);
+      monthly[mo] = (monthly[mo]||0)+b.pricing.subtotal;
+    });
+    const months = Object.keys(monthly).sort();
+    const max = Math.max(1,...Object.values(monthly));
+    el.innerHTML = `<div class="dash-head"><h2>Earnings</h2></div>
+      <div class="kpi-grid">
+        <div class="kpi"><span>Total earnings</span><b>${money(earnings)}</b></div>
+        <div class="kpi"><span>Completed rentals</span><b>${myBookings.filter(b=>b.status==='COMPLETED').length}</b></div>
+        <div class="kpi"><span>Avg. per rental</span><b>${money(earnings/(myBookings.filter(b=>b.status==='COMPLETED').length||1))}</b></div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <label style="margin-bottom:14px;">Monthly earnings</label>
+        ${months.length ? months.map(mo=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span class="mono" style="width:70px;font-size:12px;color:var(--ink-soft);">${mo}</span>
+            <div class="bar" style="flex:1;"><div style="width:${(monthly[mo]/max*100).toFixed(0)}%"></div></div>
+            <span class="mono" style="width:80px;text-align:right;font-size:12.5px;">${money(monthly[mo])}</span>
+          </div>`).join('') : `<p style="color:var(--ink-soft);font-size:13px;">No completed rentals yet.</p>`}
+      </div>`;
+    return el;
+  }
+
+  if(tab==='maintenance'){
+    const today = '2026-08-11';
+    const overdueCount = myMachines.filter(m=>m.nextServiceDate < today).length;
+    el.innerHTML = `<div class="dash-head"><h2>Maintenance</h2>${overdueCount?`<span class="badge badge-rejected">${overdueCount} overdue for service</span>`:''}</div>
+      <div class="table-wrap"><table><thead><tr><th>Machine</th><th>Last service</th><th>Next service due</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>${myMachines.map(m=>{
+        const overdue = m.nextServiceDate < today && m.status!=='MAINTENANCE';
+        return `<tr>
+          <td>${m.emoji} ${m.name}</td>
+          <td>${m.lastServiceDate?fmtDate(m.lastServiceDate):'—'}</td>
+          <td style="${overdue?'color:var(--rust);font-weight:700;':''}">${m.nextServiceDate?fmtDate(m.nextServiceDate):'—'}${overdue?' · overdue':''}</td>
+          <td><span class="status ${m.status==='MAINTENANCE'?'DISPUTED':'CONFIRMED'}">${m.status}</span></td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn btn-sm btn-outline" data-toggle-maint="${m.id}">${m.status==='MAINTENANCE'?'Mark available':'Mark for maintenance'}</button>
+            ${m.status==='MAINTENANCE'?`<button class="btn btn-sm btn-primary" data-log-service="${m.id}">Log service done</button>`:''}
+          </td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
+    el.querySelectorAll('[data-toggle-maint]').forEach(b=>b.onclick=()=>{
+      const m = getMachine(b.dataset.toggleMaint);
+      m.status = m.status==='MAINTENANCE' ? 'AVAILABLE' : 'MAINTENANCE';
+      saveDB(); toast('Machine status updated'); render();
+    });
+    el.querySelectorAll('[data-log-service]').forEach(b=>b.onclick=()=>{
+      const m = getMachine(b.dataset.logService);
+      m.lastServiceDate = today;
+      const next = new Date(today); next.setMonth(next.getMonth()+3);
+      m.nextServiceDate = next.toISOString().slice(0,10);
+      m.status = 'AVAILABLE';
+      saveDB(); toast('Service logged — next due in 3 months'); render();
+    });
+    return el;
+  }
+
+  // overview
+  const utilization = myMachines.length ? Math.round(myBookings.filter(b=>['COMPLETED','ONGOING'].includes(b.status)).length / (myMachines.length*10) * 100) : 0;
+  el.innerHTML = `
+    <div class="dash-head"><h2>Welcome back, ${SESSION.name.split(' ')[0]}</h2><button class="btn btn-primary" id="add-machine-2">+ Add machine</button></div>
+    <div class="kpi-grid">
+      <div class="kpi"><span>Total earnings</span><b>${money(earnings)}</b></div>
+      <div class="kpi"><span>Listed machinery</span><b>${myMachines.length}</b></div>
+      <div class="kpi"><span>Pending requests</span><b>${pending.length}</b><small>${pending.length?'Needs review':''}</small></div>
+      <div class="kpi"><span>Utilization</span><b>${Math.min(utilization,100)}%</b></div>
+      <div class="kpi"><span>Maintenance due</span><b>${myMachines.filter(m=>m.nextServiceDate<'2026-08-11').length}</b><small>${myMachines.filter(m=>m.nextServiceDate<'2026-08-11').length?'Needs attention':''}</small></div>
+    </div>
+    <div class="section-head"><h2 style="font-size:18px;">Pending requests</h2></div>
+    ${bookingsTableHTML(pending, 'owner')}
+  `;
+  const addBtn2 = el.querySelector('#add-machine-2');
+  if(addBtn2) addBtn2.onclick = ()=>openAddMachineModal();
+  attachBookingActions(el, 'owner');
+  return el;
+}
+
+function openAddMachineModal(){
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="am-close">✕</button>
+      <h3 style="font-size:19px;margin-bottom:16px;">List a new machine</h3>
+      <div class="grid-2">
+        <div class="field"><label>Machine name</label><input id="am-name" placeholder="e.g. Mahindra Tractor 45HP"></div>
+        <div class="field"><label>Category</label><select id="am-cat">${CATEGORIES.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+        <div class="field"><label>Price / day (₹)</label><input id="am-price" type="number" placeholder="1200"></div>
+        <div class="field"><label>Horsepower</label><input id="am-hp" type="number" placeholder="45"></div>
+      </div>
+      <div class="field"><label>Description</label><textarea id="am-desc" rows="3" placeholder="Describe the machine's condition and suitability"></textarea></div>
+      <button class="btn btn-primary btn-full" id="am-submit">Submit for review</button>
+      <p style="font-size:11.5px;color:var(--ink-soft);text-align:center;margin-top:8px;">New listings show as "Pending" until admin verifies them.</p>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#am-close').onclick = ()=>bg.remove();
+  bg.onclick=(e)=>{if(e.target===bg) bg.remove();};
+  bg.querySelector('#am-submit').onclick = ()=>{
+    const name = bg.querySelector('#am-name').value.trim();
+    const catId = bg.querySelector('#am-cat').value;
+    const price = Number(bg.querySelector('#am-price').value)||800;
+    const hp = Number(bg.querySelector('#am-hp').value)||40;
+    if(!name){ toast('Please enter a machine name'); return; }
+    const cat = getCategory(catId);
+    DB.machines.push({
+      id: uid('mch'), name, categoryId:catId, brand:'—', model:'—', year:2025, horsepower:hp,
+      fuelType:'Diesel', condition:'Good', pricePerHour:Math.round(price/9), pricePerDay:price, pricePerWeek:price*6,
+      deposit:Math.round(price*1.5), ownerId:SESSION.userId, location:(getOwner(SESSION.userId)||{location:LOCATIONS[0]}).location,
+      serviceRadius:20, description: bg.querySelector('#am-desc').value||'No description provided.', features:[],
+      rating:'0.0', numRentals:0, verification:'PENDING', status:'AVAILABLE', operatorAvailable:false, emoji:cat.icon,
+    });
+    saveDB();
+    bg.remove();
+    toast('Machine submitted — pending admin verification.');
+    render();
+  };
+}
+
+/* ---------------- OPERATOR DASHBOARD ---------------- */
+function operatorDashboard(tab){
+  const el = document.createElement('div');
+  const myJobs = DB.bookings.filter(b=>b.operatorId===SESSION.userId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const earnings = myJobs.filter(b=>b.status==='COMPLETED').reduce((s,b)=>s+b.pricing.operatorCost,0);
+  const pending = myJobs.filter(b=>b.status==='PENDING');
+
+  if(tab==='jobs'){
+    el.innerHTML = `<div class="dash-head"><h2>Assigned Jobs</h2></div>` + bookingsTableHTML(myJobs.filter(b=>b.status!=='PENDING'), 'operator');
+    return el;
+  }
+  if(tab==='requests'){
+    el.innerHTML = `<div class="dash-head"><h2>Work Requests</h2></div>` + bookingsTableHTML(pending, 'operator');
+    return el;
+  }
+  if(tab==='messages'){ messagesPane(el, ROUTE.params.conv); return el; }
+  el.innerHTML = `
+    <div class="dash-head"><h2>Welcome back, ${SESSION.name.split(' ')[0]}</h2></div>
+    <div class="kpi-grid">
+      <div class="kpi"><span>Total earnings</span><b>${money(earnings)}</b></div>
+      <div class="kpi"><span>Completed jobs</span><b>${myJobs.filter(b=>b.status==='COMPLETED').length}</b></div>
+      <div class="kpi"><span>Pending requests</span><b>${pending.length}</b></div>
+      <div class="kpi"><span>Rating</span><b>★ ${getOperator(SESSION.userId)?.rating||'—'}</b></div>
+    </div>
+    <div class="section-head"><h2 style="font-size:18px;">Recent jobs</h2></div>
+    ${bookingsTableHTML(myJobs.slice(0,6), 'operator')}
+  `;
+  return el;
+}
+
+/* ---------------- ADMIN DASHBOARD ---------------- */
+function adminDashboard(tab){
+  const el = document.createElement('div');
+
+  if(tab==='users'){
+    el.innerHTML = `<div class="dash-head"><h2>Users</h2></div>
+      <div class="tabs" id="user-tabs">
+        <div class="tab active" data-t="farmers">Farmers (${DB.farmers.length})</div>
+        <div class="tab" data-t="owners">Owners (${DB.owners.length})</div>
+        <div class="tab" data-t="operators">Operators (${DB.operators.length})</div>
+      </div>
+      <div id="user-table"></div>`;
+    const paint = (t)=>{
+      const list = t==='farmers'?DB.farmers:t==='owners'?DB.owners:DB.operators;
+      el.querySelector('#user-table').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Location</th>${t!=='farmers'?'<th>Verified</th><th>Rating</th>':'<th>Farm size</th>'}<th>Joined</th></tr></thead>
+        <tbody>${list.map(u=>`<tr><td>${u.name}</td><td>${u.location.district}, ${u.location.state}</td>
+        ${t!=='farmers'?`<td>${u.verified?'<span class="badge badge-verified">✓ Verified</span>':'<span class="badge badge-pending">Pending</span>'}</td><td>★ ${u.rating}</td>`:`<td>${u.farmSize} acres</td>`}
+        <td>${u.joined?fmtDate(u.joined):'—'}</td></tr>`).join('')}</tbody></table></div>`;
+    };
+    paint('farmers');
+    el.querySelectorAll('#user-tabs .tab').forEach(t=>t.onclick=()=>{
+      el.querySelectorAll('#user-tabs .tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active'); paint(t.dataset.t);
+    });
+    return el;
+  }
+
+  if(tab==='listings'){
+    el.innerHTML = `<div class="dash-head"><h2>Machinery Listings</h2></div>
+      <div class="table-wrap"><table><thead><tr><th>Machine</th><th>Owner</th><th>Price/day</th><th>Verification</th><th>Action</th></tr></thead>
+      <tbody>${DB.machines.map(m=>`<tr><td>${m.emoji} ${m.name}</td><td>${getOwner(m.ownerId)?.name||'—'}</td><td class="mono">${money(m.pricePerDay)}</td>
+      <td>${m.verification==='VERIFIED'?'<span class="badge badge-verified">✓ Verified</span>':'<span class="badge badge-pending">Pending</span>'}</td>
+      <td>${m.verification!=='VERIFIED'?`<button class="btn btn-sm btn-primary" data-approve="${m.id}">Approve</button> <button class="btn btn-sm btn-outline" data-reject-m="${m.id}">Reject</button>`:'—'}</td></tr>`).join('')}</tbody></table></div>`;
+    el.querySelectorAll('[data-approve]').forEach(b=>b.onclick=()=>{getMachine(b.dataset.approve).verification='VERIFIED'; saveDB(); toast('Listing approved'); render();});
+    el.querySelectorAll('[data-reject-m]').forEach(b=>b.onclick=()=>{getMachine(b.dataset.rejectM).verification='REJECTED'; saveDB(); toast('Listing rejected'); render();});
+    return el;
+  }
+
+  if(tab==='bookings'){
+    el.innerHTML = `<div class="dash-head"><h2>All Bookings</h2></div>` + bookingsTableHTML(DB.bookings.slice(0,60), 'admin');
+    return el;
+  }
+
+  if(tab==='disputes'){
+    el.innerHTML = `<div class="dash-head"><h2>Disputes</h2></div>`;
+    if(!DB.disputes.length){
+      el.innerHTML += `<div class="empty-state"><div class="glyph">⚖️</div><h4>No disputes</h4><p>Disputes raised by farmers or owners will appear here for review.</p></div>`;
+      return el;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    wrap.innerHTML = `<table><thead><tr><th>Machine</th><th>Type</th><th>Raised by</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>${DB.disputes.map(d=>{
+        const m = getMachine(d.machineId);
+        const raiser = getFarmer(d.raisedBy)||getOwner(d.raisedBy)||getOperator(d.raisedBy);
+        return `<tr>
+          <td>${m?m.name:'—'}</td>
+          <td>${d.type}</td>
+          <td>${raiser?raiser.name:'—'}</td>
+          <td><span class="status ${d.status==='OPEN'?'PENDING':d.status==='RESOLVED'?'CONFIRMED':'REJECTED'}">${d.status}</span></td>
+          <td style="display:flex;gap:6px;">
+            ${d.status==='OPEN'?`<button class="btn btn-sm btn-primary" data-resolve="${d.id}">Resolve</button><button class="btn btn-sm btn-outline" data-dismiss="${d.id}">Dismiss</button>`:'—'}
+          </td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+    el.appendChild(wrap);
+    wrap.querySelectorAll('[data-resolve]').forEach(b=>b.onclick=()=>{
+      const d = DB.disputes.find(x=>x.id===b.dataset.resolve);
+      d.status='RESOLVED'; saveDB(); toast('Dispute marked resolved'); render();
+    });
+    wrap.querySelectorAll('[data-dismiss]').forEach(b=>b.onclick=()=>{
+      const d = DB.disputes.find(x=>x.id===b.dataset.dismiss);
+      d.status='REJECTED'; saveDB(); toast('Dispute dismissed'); render();
+    });
+    return el;
+  }
+
+  if(tab==='revenue'){
+    const paid = DB.bookings.filter(b=>['COMPLETED','ONGOING','CONFIRMED'].includes(b.status) && b.paymentStatus==='PAID');
+    const gmv = paid.reduce((s,b)=>s+b.pricing.total,0);
+    const feeRevenue = paid.reduce((s,b)=>s+b.pricing.platformFee,0);
+    const ownerPayouts = paid.reduce((s,b)=>s+b.pricing.subtotal,0);
+    const operatorPayouts = paid.reduce((s,b)=>s+b.pricing.operatorCost,0);
+    const refunded = DB.bookings.filter(b=>b.paymentStatus==='REFUNDED').reduce((s,b)=>s+b.pricing.total,0);
+    const netRevenue = feeRevenue - refunded;
+    el.innerHTML = `
+      <div class="dash-head"><h2>Platform revenue</h2></div>
+      <div class="kpi-grid">
+        <div class="kpi"><span>Gross transaction value</span><b>${money(gmv)}</b></div>
+        <div class="kpi"><span>Platform fee revenue</span><b>${money(feeRevenue)}</b><small>@ ${pctLabel(currentPlatformFeeRate())} on new bookings</small></div>
+        <div class="kpi"><span>Owner payouts</span><b>${money(ownerPayouts)}</b></div>
+        <div class="kpi"><span>Operator payouts</span><b>${money(operatorPayouts)}</b></div>
+        <div class="kpi"><span>Refunds</span><b>${money(refunded)}</b></div>
+        <div class="kpi"><span>Net platform revenue</span><b>${money(netRevenue)}</b></div>
+      </div>
+      <div class="card" style="padding:20px;margin-top:6px;">
+        <label style="margin-bottom:10px;">How this is calculated</label>
+        <p style="font-size:13px;color:var(--ink-soft);line-height:1.7;">
+          Gross transaction value is the total of every paid booking. Platform fee revenue is FarmConnect's
+          cut of each booking (stored on the booking at the rate that was live when it was created — never
+          recalculated later). Net platform revenue is fee revenue minus refunds issued. Owner and operator
+          payouts are shown separately and are never reduced to fund the platform's own fee.
+        </p>
+      </div>`;
+    return el;
+  }
+
+  if(tab==='automations'){
+    const wfs = DB.n8nWorkflows||[];
+    el.innerHTML = `<div class="dash-head"><h2>Automations (n8n)</h2></div>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;max-width:640px;">
+        These represent the 16 n8n workflows that back this platform's async lifecycle (booking timeouts,
+        payment webhooks, operator matching, daily reports, ...). This standalone demo file shows their
+        configuration and mock recent activity for illustration — it is not connected to a live n8n instance.
+        The production build's <span class="mono">/n8n/workflows/*.json</span> and admin API provide the real,
+        importable definitions and live execution history.
+      </p>
+      <div class="table-wrap"><table><thead><tr><th>Workflow</th><th>Status</th><th>Last run</th><th>Success</th><th>Failures</th><th></th></tr></thead>
+      <tbody>${wfs.map(w=>`<tr>
+        <td>${w.name}</td>
+        <td>${w.enabled?'<span class="badge badge-verified">Enabled</span>':'<span class="badge badge-neutral">Disabled</span>'}</td>
+        <td>${fmtDate(w.lastRunAt)}</td>
+        <td class="mono">${w.successCount}</td>
+        <td class="mono">${w.failureCount}</td>
+        <td><button class="btn btn-sm btn-outline" data-toggle-wf="${w.key}">${w.enabled?'Disable':'Enable'}</button></td>
+      </tr>`).join('')}</tbody></table></div>`;
+    el.querySelectorAll('[data-toggle-wf]').forEach(b=>b.onclick=()=>{
+      const w = DB.n8nWorkflows.find(x=>x.key===b.dataset.toggleWf);
+      w.enabled = !w.enabled; saveDB(); toast(`${w.name} ${w.enabled?'enabled':'disabled'}`); render();
+    });
+    return el;
+  }
+
+  if(tab==='settings'){
+    const cfg = DB.platformFeeConfig;
+    el.innerHTML = `
+      <div class="dash-head"><h2>Platform fee</h2></div>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;max-width:600px;">
+        Changing the rate applies to <b>new bookings only</b> — every booking already created keeps the exact
+        rate and fee it was charged, forever.
+      </p>
+      <div class="card" style="padding:20px;margin-bottom:20px;max-width:420px;">
+        <span style="font-size:11.5px;font-weight:700;text-transform:uppercase;color:var(--ink-soft);">Current platform fee</span>
+        <b class="mono" style="font-size:34px;display:block;margin-top:6px;color:var(--furrow-dark);">${pctLabel(cfg.rate)}</b>
+        <p style="font-size:12px;color:var(--ink-soft);margin-top:8px;">Effective since ${fmtDate(cfg.effectiveFrom)}${cfg.reason?' — '+cfg.reason:''}</p>
+      </div>
+      <div class="card" style="padding:20px;margin-bottom:20px;max-width:420px;">
+        <label style="margin-bottom:10px;">Change rate</label>
+        <div class="field"><label>New rate (%)</label><input type="number" id="fee-rate-input" min="0" max="20" step="0.01" placeholder="2.00"></div>
+        <div class="field"><label>Reason</label><input type="text" id="fee-reason-input" placeholder="e.g. Q4 pricing review"></div>
+        <button class="btn btn-primary" id="fee-save-btn">Update rate</button>
+      </div>
+      <label style="margin-bottom:10px;display:block;">Rate history</label>
+      <div class="table-wrap"><table><thead><tr><th>Rate</th><th>Effective from</th><th>Effective to</th><th>Changed by</th><th>Reason</th></tr></thead>
+      <tbody>${DB.platformFeeHistory.slice().reverse().map(h=>`<tr>
+        <td class="mono">${pctLabel(h.rate)}</td>
+        <td>${fmtDate(h.effectiveFrom)}</td>
+        <td>${h.effectiveTo?fmtDate(h.effectiveTo):'—'}</td>
+        <td>${h.changedBy||'—'}</td>
+        <td style="color:var(--ink-soft);">${h.reason||'—'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+    el.querySelector('#fee-save-btn').onclick = ()=>{
+      const pct = Number(el.querySelector('#fee-rate-input').value);
+      const reason = el.querySelector('#fee-reason-input').value.trim();
+      if(!Number.isFinite(pct) || pct<0 || pct>20){ toast('Enter a rate between 0 and 20%.'); return; }
+      if(reason.length<3){ toast('Please give a short reason for the change.'); return; }
+      const now = new Date().toISOString();
+      const openEntry = DB.platformFeeHistory.find(h=>!h.effectiveTo);
+      if(openEntry) openEntry.effectiveTo = now;
+      const newRate = pct/100;
+      DB.platformFeeHistory.push({id:uid('fee'), rate:newRate, effectiveFrom:now, effectiveTo:null, changedBy:SESSION.name, reason});
+      DB.platformFeeConfig = {rate:newRate, effectiveFrom:now, updatedBy:SESSION.name, reason};
+      saveDB();
+      toast(`Platform fee updated to ${pctLabel(newRate)} — applies to new bookings only.`);
+      render();
+    };
+    return el;
+  }
+
+  // overview
+  const totalRevenue = DB.bookings.filter(b=>b.status==='COMPLETED').reduce((s,b)=>s+b.pricing.platformFee,0);
+  const completed = DB.bookings.filter(b=>b.status==='COMPLETED').length;
+  const cancelled = DB.bookings.filter(b=>b.status==='CANCELLED'||b.status==='REJECTED').length;
+  const cats = {};
+  DB.machines.forEach(m=>{cats[m.categoryId]=(cats[m.categoryId]||0)+m.numRentals;});
+  const topCats = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxCat = Math.max(1,...topCats.map(c=>c[1]));
+  const byMonth = {};
+  DB.bookings.forEach(b=>{ const mo=b.startDate.slice(0,7); byMonth[mo]=(byMonth[mo]||0)+1; });
+  const months = Object.keys(byMonth).sort();
+  const maxMonth = Math.max(1,...Object.values(byMonth));
+
+  el.innerHTML = `
+    <div class="dash-head"><h2>Platform overview</h2></div>
+    <div class="kpi-grid">
+      <div class="kpi"><span>Total users</span><b>${DB.farmers.length+DB.owners.length+DB.operators.length}</b></div>
+      <div class="kpi"><span>Active listings</span><b>${DB.machines.filter(m=>m.status==='AVAILABLE').length}</b></div>
+      <div class="kpi"><span>Total bookings</span><b>${DB.bookings.length}</b></div>
+      <div class="kpi"><span>Platform revenue</span><b>${money(totalRevenue)}</b></div>
+      <div class="kpi"><span>Completed rentals</span><b>${completed}</b></div>
+      <div class="kpi"><span>Cancellation rate</span><b>${Math.round(cancelled/DB.bookings.length*100)}%</b></div>
+    </div>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="card" style="padding:20px;">
+        <label style="margin-bottom:14px;">Booking growth (by month)</label>
+        <div style="display:flex;align-items:flex-end;gap:8px;height:120px;">
+          ${months.map(mo=>`
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+              <span class="mono" style="font-size:10.5px;color:var(--ink-soft);margin-bottom:4px;">${byMonth[mo]}</span>
+              <div style="width:100%;background:var(--furrow);border-radius:4px 4px 0 0;height:${(byMonth[mo]/maxMonth*90).toFixed(0)}px;"></div>
+              <span class="mono" style="font-size:10px;color:var(--ink-soft);margin-top:4px;">${mo.slice(5)}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <label style="margin-bottom:14px;">Most popular categories</label>
+        ${topCats.map(([id,n])=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span style="width:90px;font-size:12.5px;">${getCategory(id)?.name}</span>
+            <div class="bar" style="flex:1;"><div style="width:${(n/maxCat*100).toFixed(0)}%"></div></div>
+            <span class="mono" style="width:30px;text-align:right;font-size:12px;">${n}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+      <div class="card" style="padding:20px;">
+        <label style="margin-bottom:14px;">Verification queue</label>
+        <p style="font-size:13.5px;">Machinery pending review: <b>${DB.machines.filter(m=>m.verification==='PENDING').length}</b></p>
+        <p style="font-size:13.5px;">Owners pending verification: <b>${DB.owners.filter(o=>!o.verified).length}</b></p>
+        <p style="font-size:13.5px;">Operators pending verification: <b>${DB.operators.filter(o=>!o.verified).length}</b></p>
+        <button class="btn btn-outline btn-sm" style="margin-top:8px;" id="go-listings">Review listings →</button>
+      </div>
+      <div class="card" style="padding:20px;">
+        <label style="margin-bottom:14px;">Platform fee</label>
+        <p style="font-size:13.5px;">Current rate: <b class="mono">${pctLabel(currentPlatformFeeRate())}</b> — applies to all new bookings.</p>
+        <button class="btn btn-outline btn-sm" style="margin-top:8px;" id="go-settings">Manage platform fee →</button>
+      </div>
+    </div>
+  `;
+  const goListings = el.querySelector('#go-listings');
+  if(goListings) goListings.onclick = ()=>nav('dashboard',{tab:'listings'});
+  const goSettings = el.querySelector('#go-settings');
+  if(goSettings) goSettings.onclick = ()=>nav('dashboard',{tab:'settings'});
+  return el;
+}
+
+/* ============================================================
+   MESSAGING
+   ============================================================ */
+function conversationsFor(userId){
+  return DB.conversations.filter(c=>c.userA===userId || c.userB===userId);
+}
+function otherParty(conv, userId){
+  const otherId = conv.userA===userId ? conv.userB : conv.userA;
+  return DB.owners.find(o=>o.id===otherId) || DB.operators.find(o=>o.id===otherId) || DB.farmers.find(o=>o.id===otherId);
+}
+function findOrCreateConversation({userA, userB, machineId}){
+  let conv = DB.conversations.find(c=>(c.userA===userA&&c.userB===userB)||(c.userA===userB&&c.userB===userA));
+  if(!conv){
+    conv = {id: uid('cnv'), userA, userB, machineId: machineId||null, createdAt: new Date().toISOString()};
+    DB.conversations.push(conv);
+  }
+  return conv;
+}
+function openConversation(opts){
+  const conv = findOrCreateConversation(opts);
+  saveDB();
+  nav('dashboard', {tab:'messages', conv: conv.id});
+}
+function messagesPane(root, activeConvId){
+  const mine = conversationsFor(SESSION.userId).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<div class="dash-head"><h2>Messages</h2></div>`;
+  if(!mine.length){
+    wrap.innerHTML += `<div class="empty-state"><div class="glyph">💬</div><h4>No conversations yet</h4><p>Message an owner from any machine's detail page to start a conversation.</p></div>`;
+    root.appendChild(wrap);
+    return;
+  }
+  const activeConv = mine.find(c=>c.id===activeConvId) || mine[0];
+  const layout = document.createElement('div');
+  layout.style.cssText = 'display:grid;grid-template-columns:240px 1fr;gap:16px;';
+  const list = document.createElement('div');
+  list.className = 'card';
+  list.style.padding = '6px';
+  list.innerHTML = mine.map(c=>{
+    const other = otherParty(c, SESSION.userId);
+    const unread = DB.messages.filter(m=>m.conversationId===c.id && m.toUserId===SESSION.userId && !m.read).length;
+    return `<div class="side-link ${c.id===activeConv.id?'active':''}" data-conv="${c.id}" style="color:${c.id===activeConv.id?'var(--husk)':'var(--ink)'};display:flex;justify-content:space-between;">
+      <span>${other?other.name:'User'}</span>${unread?`<span class="badge badge-pending">${unread}</span>`:''}
+    </div>`;
+  }).join('');
+  const thread = document.createElement('div');
+  thread.className = 'card';
+  thread.style.cssText = 'padding:16px;display:flex;flex-direction:column;height:440px;';
+  function paintThread(conv){
+    const other = otherParty(conv, SESSION.userId);
+    const msgs = DB.messages.filter(m=>m.conversationId===conv.id).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+    msgs.forEach(m=>{ if(m.toUserId===SESSION.userId) m.read=true; });
+    saveDB();
+    thread.innerHTML = `
+      <div style="font-weight:700;font-size:14.5px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:10px;">${other?other.name:'User'}</div>
+      <div id="thread-msgs" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+        ${msgs.length ? msgs.map(m=>`
+          <div style="align-self:${m.fromUserId===SESSION.userId?'flex-end':'flex-start'};max-width:75%;">
+            <div style="background:${m.fromUserId===SESSION.userId?'var(--furrow)':'var(--husk-2)'};color:${m.fromUserId===SESSION.userId?'var(--husk)':'var(--ink)'};padding:8px 12px;border-radius:10px;font-size:13.5px;">${m.body}</div>
+          </div>`).join('') : `<p style="color:var(--ink-soft);font-size:13px;">Say hello to start the conversation.</p>`}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input id="thread-input" placeholder="Write a message...">
+        <button class="btn btn-primary btn-sm" id="thread-send">Send</button>
+      </div>`;
+    thread.querySelector('#thread-send').onclick = ()=>{
+      const val = thread.querySelector('#thread-input').value.trim();
+      if(!val) return;
+      DB.messages.push({id:uid('msg'), conversationId:conv.id, fromUserId:SESSION.userId, toUserId: conv.userA===SESSION.userId?conv.userB:conv.userA, body:val, read:false, createdAt:new Date().toISOString()});
+      saveDB();
+      paintThread(conv);
+    };
+  }
+  paintThread(activeConv);
+  list.querySelectorAll('[data-conv]').forEach(l=>l.onclick=()=>{
+    layout.querySelectorAll('[data-conv]').forEach(x=>{x.classList.remove('active'); x.style.color='var(--ink)';});
+    l.classList.add('active'); l.style.color='var(--husk)';
+    paintThread(mine.find(c=>c.id===l.dataset.conv));
+  });
+  layout.appendChild(list);
+  layout.appendChild(thread);
+  wrap.appendChild(layout);
+  root.appendChild(wrap);
+}
+
+/* ============================================================
+   DISPUTES
+   ============================================================ */
+function openDisputeModal(bookingId){
+  const bk = DB.bookings.find(b=>b.id===bookingId);
+  const m = getMachine(bk.machineId);
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="dp-close">✕</button>
+      <h3 style="font-size:19px;margin-bottom:4px;">Report an issue</h3>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">${m.name} · ${fmtDate(bk.startDate)}</p>
+      <div class="field"><label>Issue type</label>
+        <select id="dp-type">
+          <option>Machine not delivered</option>
+          <option>Machine damaged</option>
+          <option>Wrong machine</option>
+          <option>Booking issue</option>
+          <option>Payment issue</option>
+        </select>
+      </div>
+      <div class="field"><label>Details</label><textarea id="dp-details" rows="3" placeholder="Describe what happened"></textarea></div>
+      <button class="btn btn-danger btn-full" id="dp-submit">Submit dispute</button>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#dp-close').onclick = ()=>bg.remove();
+  bg.onclick = (e)=>{ if(e.target===bg) bg.remove(); };
+  bg.querySelector('#dp-submit').onclick = ()=>{
+    DB.disputes.push({
+      id: uid('dsp'), bookingId: bk.id, machineId: m.id,
+      raisedBy: SESSION.userId, againstUserId: SESSION.userId===bk.farmerId ? bk.ownerId : bk.farmerId,
+      type: bg.querySelector('#dp-type').value, details: bg.querySelector('#dp-details').value || 'No details provided.',
+      status:'OPEN', createdAt:new Date().toISOString(),
+    });
+    bk.status='DISPUTED';
+    saveDB();
+    bg.remove();
+    toast('Dispute submitted for admin review.');
+    render();
+  };
+}
+
+/* ============================================================
+   MACHINE COMPARISON
+   ============================================================ */
+let COMPARE_SET = new Set();
+function compareBar(){
+  if(COMPARE_SET.size===0) return '';
+  return `
+    <div style="position:fixed;bottom:0;left:0;right:0;background:var(--ink);color:var(--husk);padding:12px 20px;z-index:150;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13.5px;">${COMPARE_SET.size} machine${COMPARE_SET.size>1?'s':''} selected to compare</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-outline" style="border-color:var(--husk);color:var(--husk);" id="clear-compare">Clear</button>
+        <button class="btn btn-sm btn-primary" id="do-compare" ${COMPARE_SET.size<2?'disabled':''}>Compare (${COMPARE_SET.size})</button>
+      </div>
+    </div>`;
+}
+function attachCompareHandlers(root){
+  root.querySelectorAll('[data-compare]').forEach(cb=>{
+    cb.checked = COMPARE_SET.has(cb.dataset.compare);
+    cb.onclick = (e)=>{
+      e.stopPropagation();
+      const id = cb.dataset.compare;
+      if(COMPARE_SET.has(id)) COMPARE_SET.delete(id);
+      else { if(COMPARE_SET.size>=4){ toast('Compare up to 4 machines at a time.'); cb.checked=false; return; } COMPARE_SET.add(id); }
+      render();
+    };
+  });
+  const clearBtn = root.querySelector('#clear-compare');
+  if(clearBtn) clearBtn.onclick = ()=>{ COMPARE_SET.clear(); render(); };
+  const doBtn = root.querySelector('#do-compare');
+  if(doBtn) doBtn.onclick = ()=>openCompareModal();
+}
+function openCompareModal(){
+  const machines = [...COMPARE_SET].map(getMachine).filter(Boolean);
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  const rows = [
+    ['Price / day', m=>money(m.pricePerDay)],
+    ['Horsepower', m=>m.horsepower+' HP'],
+    ['Brand', m=>m.brand],
+    ['Condition', m=>m.condition],
+    ['Rating', m=>'★ '+m.rating],
+    ['Distance / district', m=>m.location.district],
+    ['Operator available', m=>m.operatorAvailable?'Yes':'No'],
+  ];
+  bg.innerHTML = `
+    <div class="modal" style="max-width:760px;">
+      <button class="modal-close" id="cmp-close">✕</button>
+      <h3 style="font-size:19px;margin-bottom:16px;">Compare machinery</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th></th>${machines.map(m=>`<th>${m.emoji} ${m.name}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map(([label,fn])=>`<tr><td style="font-weight:700;">${label}</td>${machines.map(m=>`<td>${fn(m)}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#cmp-close').onclick = ()=>bg.remove();
+  bg.onclick = (e)=>{ if(e.target===bg) bg.remove(); };
+}
+
+/* ============================================================
+   REQUIREMENT MATCHING — "Tell us what you need"
+   ============================================================ */
+function openRequirementModal(){
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  bg.innerHTML = `
+    <div class="modal">
+      <button class="modal-close" id="rq-close">✕</button>
+      <h3 style="font-size:19px;margin-bottom:4px;">Tell us what you need</h3>
+      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:16px;">We'll match suitable machinery from current listings.</p>
+      <div class="grid-2">
+        <div class="field"><label>Crop</label><input id="rq-crop" placeholder="e.g. Rice"></div>
+        <div class="field"><label>Farm size (acres)</label><input id="rq-size" type="number" placeholder="5"></div>
+        <div class="field"><label>Task</label>
+          <select id="rq-task">
+            <option value="">Any</option>
+            ${CATEGORIES.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Budget / day (₹)</label><input id="rq-budget" type="number" placeholder="10000"></div>
+      </div>
+      <button class="btn btn-primary btn-full" id="rq-submit">Find matches</button>
+      <div id="rq-results" style="margin-top:16px;"></div>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#rq-close').onclick = ()=>bg.remove();
+  bg.onclick = (e)=>{ if(e.target===bg) bg.remove(); };
+  bg.querySelector('#rq-submit').onclick = ()=>{
+    const task = bg.querySelector('#rq-task').value;
+    const budget = Number(bg.querySelector('#rq-budget').value)||Infinity;
+    let matches = DB.machines.filter(m=>{
+      if(task && m.categoryId!==task) return false;
+      if(m.pricePerDay>budget) return false;
+      if(m.status!=='AVAILABLE') return false;
+      return true;
+    }).sort((a,b)=>b.rating-a.rating).slice(0,6);
+    const resEl = bg.querySelector('#rq-results');
+    resEl.innerHTML = matches.length ? `
+      <label style="margin-bottom:8px;">${matches.length} suitable machine${matches.length>1?'s':''}</label>
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;">
+        ${matches.map(m=>`<div class="card" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" data-goto="${m.id}">
+          <span>${m.emoji} ${m.name}</span><b class="mono">${money(m.pricePerDay)}/day</b>
+        </div>`).join('')}
+      </div>` : `<div class="empty-state" style="padding:20px;"><p>No machinery matches that budget right now. Try widening it.</p></div>`;
+    resEl.querySelectorAll('[data-goto]').forEach(c=>c.onclick=()=>{ bg.remove(); nav('machine',{id:c.dataset.goto}); });
+  };
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+async function boot(){
+  document.getElementById('app').innerHTML = `<div style="padding:80px;text-align:center;color:var(--ink-soft);">Loading FarmConnect…</div>`;
+  try{
+    await loadDB();
+  }catch(e){
+    console.error('Boot: DB load failed entirely, falling back to fresh in-memory seed', e);
+    DB = generateSeed();
+    toast('Could not reach saved data — starting a fresh in-memory session.');
+  }
+  initRouter();
+  render();
+}
+boot();
+</script>
+</body>
+</html>
